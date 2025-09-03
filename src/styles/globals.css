@@ -1,10 +1,10 @@
 @import "tailwindcss";
 
-@import "tailwindcss/preflight";
-@import "tailwindcss/utilities";
+/*@import "tailwindcss/preflight";
+@import "tailwindcss/utilities";*/
 
 /* You can add your global styles here */
 :root {
-    --primary-color: hsl(85, 85%, 35%); 
-    --secondary-color: rgb(101, 163, 13, 20%);
+  --primary-color: hsl(85, 85%, 35%);
+  --secondary-color: rgb(101, 163, 13, 20%);
 }

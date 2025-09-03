@@ -1,9 +1,10 @@
-'use client';
+"use client";
 
 import ThemeToggle from "../components/ThemeToggle";
 import { useTheme } from "next-themes";
 import { useState, useEffect } from "react";
 
+import "../styles/globals.css";
 export default function Page() {
   const [mounted, setMounted] = useState(false);
   const { resolvedTheme } = useTheme();
