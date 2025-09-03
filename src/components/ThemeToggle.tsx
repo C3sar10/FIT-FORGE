@@ -2,21 +2,26 @@
 
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
+import "../styles/globals.css";
 
 export default function ThemeToggle() {
-    const { theme, setTheme } = useTheme();
+    const { resolvedTheme, setTheme } = useTheme();
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => setMounted(true), []);
     
     if (!mounted) return null;
 
+    const isDark = resolvedTheme === "dark";
+    console.log(resolvedTheme);
+    
+
     return (
         <button
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="p-2 rounded bg-gray-200 dark:bg-gray-800"
+            onClick={() => setTheme(isDark ? "light" : "dark")}
+            className="p-2 rounded bg-[var(--primary-button)] transition"
         >
-            {theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            {isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
         </button>
     );
 }

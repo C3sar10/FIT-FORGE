@@ -1,10 +1,17 @@
 @import "tailwindcss";
 
-@import "tailwindcss/preflight";
-@import "tailwindcss/utilities";
+@custom-variant dark (&:is(.dark *));
 
-/* You can add your global styles here */
 :root {
-    --primary-color: hsl(85, 85%, 35%); 
+    --primary-button: hsl(85, 85%, 35%); 
     --secondary-color: rgb(101, 163, 13, 20%);
 }
+
+.dark {
+    --primary-button: hsl(0, 0%, 0%);
+    --secondary-color: rgb(101, 163, 13, 40%);
+}
+
+/* button {
+    background-color: var(--primary-color);
+} */
