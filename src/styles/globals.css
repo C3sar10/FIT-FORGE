@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
-@custom-variant dark (&:is(.dark *));
+/*@import "tailwindcss/preflight";
+@import "tailwindcss/utilities";*/
 
 :root {
     --primary-button: hsl(85, 85%, 35%); 
