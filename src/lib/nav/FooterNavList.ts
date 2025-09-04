@@ -10,18 +10,22 @@ export const FooterNavList: FooterNav[] = [
   {
     name: "Workouts",
     icon: BicepsFlexed,
+    route: "/dash/workouts",
   },
   {
     name: "Schedule",
     icon: CalendarCheck,
+    route: "/dash/schedule",
   },
   {
     name: "Plans",
     icon: NotebookText,
+    route: "/dash/plans",
   },
   {
     name: "Progress",
     icon: ChartLine,
+    route: "/dash/progress",
   },
 ];
 

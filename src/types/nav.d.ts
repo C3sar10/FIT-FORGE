@@ -4,6 +4,7 @@ export interface FooterNav {
   name: string;
   icon?: LucideIcon;
   link?: string;
+  route: string;
 }
 
 export interface FooterMenuList {
