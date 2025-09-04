@@ -4,6 +4,7 @@ import "../styles/globals.css";
 import { ThemeProvider } from "next-themes";
 import { Metadata } from "next";
 import { roboto } from "@/lib/fonts";
+import "@/lib/amplify"; // Add this
 
 export const metadata: Metadata = {
   title: "My App",

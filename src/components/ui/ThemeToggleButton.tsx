@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 export default function ThemeToggle() {
   const { theme, setTheme } = useTheme();
   const [isLight, setIsLight] = useState(theme === "light");
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setIsLight(theme === "light");
@@ -14,6 +15,10 @@ export default function ThemeToggle() {
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark");
   };
+
+  useEffect(() => setMounted(true), []);
+
+  if (!mounted) return null;
 
   return (
     <Switch
