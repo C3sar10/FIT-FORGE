@@ -3,6 +3,7 @@ import "../styles/globals.css";
 
 import { ThemeProvider } from "next-themes";
 import { Metadata } from "next";
+import { roboto } from "@/lib/fonts";
 
 export const metadata: Metadata = {
   title: "My App",
@@ -16,7 +17,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className={roboto.className} suppressHydrationWarning>
       <body className="">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           {children}
