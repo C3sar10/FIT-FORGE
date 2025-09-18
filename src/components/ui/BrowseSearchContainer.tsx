@@ -17,13 +17,14 @@ const BrowseSearchContainer = (props: Props) => {
   return (
     <div className="w-full h-full flex flex-col gap-0">
       <MainSearchInput />
-      <div className="px-4 pb-4 w-full grid grid-cols-2 md:grid-cols-3 gap-4">
+      <div className="px-4 pb-4 w-full grid grid-cols-1 min-[375px]:grid-cols-2 md:grid-cols-3 gap-4">
         {WorkoutBrowseDefault.map((item, index) => (
           <SmallBrowseCards
             key={index}
             title={item.title}
             Icon={item.icon}
             subtitle={item.subtitle}
+            imgUrl={item.imgUrl}
           />
         ))}
       </div>

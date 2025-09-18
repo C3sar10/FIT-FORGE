@@ -44,7 +44,7 @@ const FooterNavigation = (props: Props) => {
   const pathname = usePathname();
   return (
     <nav
-      className={`font-roboto bg-black text-white px-2 min-[325px]:p-3 pt-4 pb-3 flex items-center justify-center fixed w-full max-w-[900px] bottom-0 left-0 right-0 mx-auto transition-all duration-300 ease-out transform ${
+      className={`font-roboto z-50 bg-black text-white px-2 min-[325px]:p-3 pt-4 pb-3 flex items-center justify-center fixed w-full max-w-[900px] bottom-0 left-0 right-0 mx-auto transition-all duration-300 ease-out transform ${
         isMenuOpen ? "translate-y-full opacity-0" : "translate-y-0 opacity-100"
       }`}
     >
