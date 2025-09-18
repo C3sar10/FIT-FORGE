@@ -20,6 +20,7 @@ const WorkoutSchema = new Schema(
     author: { type: String, required: true }, // same as userId (or 'global' later)
     name: { type: String, required: true },
     description: { type: String },
+    image: { type: String },
     type: {
       type: String,
       enum: ["strength", "endurance", "sport", "speed", "other"],

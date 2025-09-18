@@ -3,40 +3,32 @@ import mongoose from "mongoose";
 import Exercise from "../models/Exercise";
 
 // Helper to make a seed doc
-const ex = (
-  title: string,
-  {
-    type = "strength",
-    tags = [] as string[],
-    description = "",
-    sets,
-    reps,
-    durationSecs,
-    restSecs,
-    equipment = [] as string[],
-  }: {
-    type?: "strength" | "endurance" | "sport" | "speed" | "other";
-    tags?: string[];
-    description?: string;
-    sets?: number;
-    reps?: number | string | null;
-    durationSecs?: number | null;
-    restSecs?: number;
-    equipment?: string[];
-  } = {}
-) => ({
+type ExerciseSeedOpts = {
+  type?: "strength" | "endurance" | "sport" | "speed" | "other";
+  tags?: string[];
+  description?: string;
+  sets?: number;
+  reps?: number | string | null; // allow "6-10" or number
+  durationSecs?: number | null;
+  restSecs?: number;
+  equipment?: string[];
+  image?: string; // NEW
+};
+
+const ex = (title: string, opts: ExerciseSeedOpts = {}) => ({
   author: "global",
   title,
-  type,
-  tags,
-  description,
+  type: opts.type ?? "strength",
+  tags: opts.tags ?? [],
+  description: opts.description ?? "",
   details: {
-    sets,
-    reps: reps ?? undefined,
-    durationSecs: durationSecs ?? undefined,
-    restSecs,
-    equipment,
+    sets: opts.sets,
+    reps: opts.reps ?? undefined,
+    durationSecs: opts.durationSecs ?? undefined,
+    restSecs: opts.restSecs,
+    equipment: opts.equipment ?? [],
   },
+  image: opts.image, // <-- fixed
 });
 
 // ~20 core movements covering push/pull/legs + accessories
@@ -49,6 +41,7 @@ const SEEDS = [
     reps: "6-10",
     restSecs: 120,
     equipment: ["barbell", "bench", "plates"],
+    image: "/exercises/bench-press.jpg",
   }),
   ex("Incline Dumbbell Press", {
     tags: ["chest", "push", "dumbbell"],
@@ -77,6 +70,7 @@ const SEEDS = [
     reps: "10-20",
     restSecs: 60,
     equipment: [],
+    image: "/exercises/pushup.jpg",
   }),
 
   // Upper — Pull
@@ -85,6 +79,7 @@ const SEEDS = [
     sets: 3,
     reps: "5-10",
     restSecs: 120,
+    image: "/exercises/pull-ups.jpg",
   }),
   ex("Lat Pulldown", {
     tags: ["back", "pull", "machine"],
@@ -92,6 +87,7 @@ const SEEDS = [
     reps: "8-12",
     restSecs: 90,
     equipment: ["pulldown machine"],
+    image: "/exercises/pull-ups.jpg",
   }),
   ex("Barbell Row", {
     tags: ["back", "pull", "barbell"],
@@ -122,6 +118,7 @@ const SEEDS = [
     reps: "5-8",
     restSecs: 180,
     equipment: ["barbell", "rack", "plates"],
+    image: "/exercises/barbell-squat.jpg",
   }),
   ex("Deadlift", {
     tags: ["posterior chain", "barbell"],
@@ -129,6 +126,7 @@ const SEEDS = [
     reps: "3-5",
     restSecs: 180,
     equipment: ["barbell", "plates"],
+    image: "/exercises/deadlift.jpg",
   }),
   ex("Romanian Deadlift (RDL)", {
     tags: ["hamstrings", "glutes", "barbell"],
@@ -150,6 +148,7 @@ const SEEDS = [
     reps: "20", // total steps
     restSecs: 90,
     equipment: ["dumbbells"],
+    image: "/exercises/walking-lunges.jpg",
   }),
 
   // Accessory / Arms / Core
@@ -159,6 +158,7 @@ const SEEDS = [
     reps: "10-15",
     restSecs: 60,
     equipment: ["dumbbells"],
+    image: "/exercises/dumbell-curls.jpg",
   }),
   ex("Tricep Pushdown", {
     tags: ["triceps", "cable"],
@@ -180,6 +180,7 @@ const SEEDS = [
     reps: null,
     durationSecs: 45,
     restSecs: 60,
+    image: "/exercises/plank.jpg",
   }),
   ex("Hanging Leg Raise", {
     tags: ["core", "bodyweight"],
@@ -187,6 +188,7 @@ const SEEDS = [
     reps: "8-12",
     restSecs: 60,
     equipment: ["pull-up bar"],
+    image: "/exercises/hanging-leg-raise.jpg",
   }),
 ];
 

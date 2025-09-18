@@ -34,7 +34,7 @@ const SmallBrowseCards: React.FC<CardProps> = ({
           alt="image"
         />
       )}
-      <div className="w-full absolute z-10 h-full bg-linear-180 from-black/0 to-black/60"></div>
+      <div className="w-full absolute z-10 h-full bg-linear-180 from-black/0 to-black/60 rounded-md"></div>
       <div className="absolute z-20 bottom-2 right-2 left-2 w-full flex flex-col items-start text-white">
         {Icon && <Icon size={24} />}{" "}
         <p className="text-base font-medium">{title}</p>

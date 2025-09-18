@@ -12,6 +12,8 @@ const ExerciseSchema = new Schema(
     },
     tags: { type: [String], default: [] },
     description: { type: String },
+    image: { type: String },
+    demoUrl: { type: String },
     details: {
       sets: { type: Number }, // default sets (optional)
       reps: { type: Schema.Types.Mixed }, // number or "6-10"

@@ -39,6 +39,7 @@ const ListQuery = z.object({
   query: z.string().trim().max(80).optional(),
   limit: z.coerce.number().int().min(1).max(50).default(20),
   cursor: z.string().optional(),
+  scope: z.enum(["mine", "global", "all"]).default("mine"),
 });
 
 // --- Create
@@ -92,17 +93,24 @@ router.post("/", async (req, res, next) => {
 // --- List (Featured/Library/Favorites)
 router.get("/", async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const { favoritesOnly, query, limit, cursor } = ListQuery.parse(req.query);
+  const { scope, favoritesOnly, query, limit, cursor } = ListQuery.parse(
+    req.query
+  );
 
-  const filter: any = { userId };
+  const filter: any = {}; // <-- start empty
+
+  if (scope === "mine") filter.userId = userId;
+  if (scope === "global") filter.author = "global";
+  if (scope === "all") filter.$or = [{ userId }, { author: "global" }];
+
   if (favoritesOnly) filter.isFavorite = true;
   if (query) filter.name = { $regex: query, $options: "i" };
   if (cursor) filter._id = { $lt: new Types.ObjectId(cursor) };
 
   const docs = await Workout.find(filter)
-    .sort({ _id: -1 }) // newest first
+    .sort({ _id: -1 })
     .limit(limit + 1)
-    .select("name tags isFavorite updatedAt blocks")
+    .select("name tags image isFavorite updatedAt blocks")
     .lean();
 
   const nextCursor = docs.length > limit ? String(docs[limit]._id) : null;
@@ -111,6 +119,7 @@ router.get("/", async (req, res) => {
     id: String(d._id),
     name: d.name,
     tags: d.tags ?? [],
+    image: d.image ?? null, // include for cards
     isFavorite: !!d.isFavorite,
     updatedAt: d.updatedAt,
     preview: ((d.blocks?.[0]?.items ?? []) as any[]).slice(0, 2).map((i) => ({
@@ -127,7 +136,12 @@ router.get("/", async (req, res) => {
 router.get("/:id", async (req, res) => {
   const userId = (req as any).user.userId as string;
   const id = req.params.id;
-  const doc = await Workout.findOne({ _id: id, userId }).lean();
+  //const doc = await Workout.findOne({ _id: id, userId }).lean();
+  const doc = await Workout.findOne({
+    _id: id,
+    $or: [{ userId }, { author: "global" }],
+  }).lean();
+
   if (!doc)
     return res
       .status(404)

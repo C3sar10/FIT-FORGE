@@ -2,7 +2,7 @@
 
 import MainHeader from "@/components/ui/MainHeader";
 import PageContainer from "@/components/ui/PageContainer";
-import React, { FormEvent, useState } from "react";
+import React, { FormEvent, useEffect, useState } from "react";
 import {
   Eye,
   EyeOff,
@@ -14,6 +14,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import Alert from "@/components/ui/Alert";
+import { useTheme } from "next-themes";
 
 type Props = {};
 
@@ -244,6 +245,17 @@ const SegmentedAuthToggle: React.FC<{
   isLogin: boolean;
   setIsLogin: (v: boolean) => void;
 }> = ({ isLogin, setIsLogin }) => {
+  const { theme, setTheme } = useTheme();
+  const [isLight, setIsLight] = useState(theme === "light");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setIsLight(theme === "light");
+    setMounted(true);
+  }, [theme]);
+
+  if (!mounted) return <></>;
+
   return (
     <div className="relative w-full max-w-[460px]">
       <div
@@ -254,7 +266,7 @@ const SegmentedAuthToggle: React.FC<{
         {/* Active pill */}
         <span
           aria-hidden
-          className={`pointer-events-none absolute inset-y-1 w-1/2 rounded-full bg-lime-500 transition-all duration-200 ease-out ${
+          className={`pointer-events-none absolute inset-y-1 w-1/2 rounded-full bg-lime-500  transition-all duration-200 ease-out ${
             isLogin ? "left-1" : "left-1/2"
           }`}
         />
@@ -262,8 +274,12 @@ const SegmentedAuthToggle: React.FC<{
         <button
           role="tab"
           aria-selected={isLogin}
-          className={`relative z-10 h-12 sm:h-14 rounded-full text-sm sm:text-base md:text-lg font-medium tracking-wide transition-colors cursor-pointer ${
-            isLogin ? "text-lime-800" : "text-white/80 hover:text-white"
+          className={`relative z-10 h-12 sm:h-14 rounded-full text-base sm:text-lg md:text-xl font-medium tracking-wide transition-colors cursor-pointer ${
+            isLight
+              ? isLogin
+                ? "text-white"
+                : "text-black"
+              : "text-white hover:text-lime-700"
           }`}
           onClick={() => setIsLogin(true)}
         >
@@ -272,8 +288,12 @@ const SegmentedAuthToggle: React.FC<{
         <button
           role="tab"
           aria-selected={!isLogin}
-          className={`relative z-10 h-12 sm:h-14 rounded-full text-sm sm:text-base md:text-lg font-medium tracking-wide transition-colors cursor-pointer ${
-            !isLogin ? "text-lime-800" : "text-white/80 hover:text-white"
+          className={`relative z-10 h-12 sm:h-14 rounded-full text-base sm:text-lg md:text-xl font-medium tracking-wide transition-colors cursor-pointer ${
+            isLight
+              ? !isLogin
+                ? "text-white"
+                : "text-black"
+              : "text-white hover:text-lime-700"
           }`}
           onClick={() => setIsLogin(false)}
         >
