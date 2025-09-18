@@ -1,9 +1,10 @@
 import React, { useState } from "react";
-import { UserRound } from "lucide-react";
+import { LogOutIcon, UserRound } from "lucide-react";
 import { useTheme } from "next-themes";
 import { ChevronUp } from "lucide-react";
 import { ChevronRight } from "lucide-react";
 import ThemeToggle from "./ThemeToggleButton";
+import { useAuth } from "@/context/AuthContext";
 
 type Props = {
   hasDetails: boolean;
@@ -16,12 +17,13 @@ interface UserMenuProps {
 
 const UserMenu: React.FC<UserMenuProps> = ({ isOpen, toggleMenu }) => {
   const { resolvedTheme } = useTheme();
+  const { logout } = useAuth();
   const isDark = resolvedTheme === "dark";
   return (
     <div
       className={`${
         isOpen ? "flex" : "hidden"
-      } w-fit min-w-[275px] max-w-[375px] min-h-[200px] absolute top-12 right-0 border rounded-lg p-3 flex-col
+      } w-fit min-w-[275px] max-w-[375px] min-h-[200px] absolute z-50 top-12 right-0 border rounded-lg p-3 flex-col
         ${
           isDark
             ? "bg-[#1e1e1e] border-neutral-100 text-white"
@@ -54,6 +56,13 @@ const UserMenu: React.FC<UserMenuProps> = ({ isOpen, toggleMenu }) => {
         <li className="w-full py-3 flex items-center justify-between gap-0 hover:text-lime-500 transition-colors ease-out duration-300 cursor-pointer">
           <p className="font-medium text-sm">Settings</p>
           <ChevronRight size={16} />
+        </li>
+        <li
+          onClick={() => logout()}
+          className="w-full py-3 flex items-center justify-between gap-0 hover:text-red-500 transition-colors ease-out duration-300 cursor-pointer"
+        >
+          <p className="font-medium text-sm">Log out</p>
+          <LogOutIcon size={16} />
         </li>
       </ul>
     </div>

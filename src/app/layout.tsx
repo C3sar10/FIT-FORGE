@@ -5,6 +5,7 @@ import { ThemeProvider } from "next-themes";
 import { Metadata } from "next";
 import { roboto } from "@/lib/fonts";
 import "@/lib/amplify"; // Add this
+import { AuthProvider } from "@/context/AuthContext";
 
 export const metadata: Metadata = {
   title: "My App",
@@ -20,9 +21,11 @@ export default function RootLayout({
   return (
     <html lang="en" className={roboto.className} suppressHydrationWarning>
       <body className="">
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          {children}
-        </ThemeProvider>
+        <AuthProvider>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+            {children}
+          </ThemeProvider>
+        </AuthProvider>
       </body>
     </html>
   );

@@ -2,18 +2,18 @@
 
 import MainHeader from "@/components/ui/MainHeader";
 import PageContainer from "@/components/ui/PageContainer";
-import { Switch } from "@headlessui/react";
 import React, { FormEvent, useState } from "react";
-import { LoginFormList, SignUpFormList } from "@/lib/auth/auth";
 import {
+  Eye,
+  EyeOff,
   LockKeyholeIcon,
   LockKeyholeOpen,
-  LucideIcon,
   Mail,
   User2,
 } from "lucide-react";
-import { Hash } from "crypto";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
+import Alert from "@/components/ui/Alert";
 
 type Props = {};
 
@@ -30,6 +30,23 @@ interface SignUpProps {
   setRememberMe: (arg0: boolean) => void;
 }
 
+/** ---------- Shared small helpers ---------- */
+const FieldIconLabel: React.FC<{
+  htmlFor: string;
+  children: React.ReactNode;
+}> = ({ htmlFor, children }) => (
+  <label
+    htmlFor={htmlFor}
+    className="flex items-center gap-2 absolute left-2 top-0 bottom-0 my-0 text-neutral-400"
+  >
+    <span className="[&>*]:size-4 sm:[&>*]:size-5">{children}</span>
+  </label>
+);
+
+const inputBase =
+  "w-full h-12 border border-neutral-200 dark:border-neutral-700 p-2 rounded-sm pl-9 bg-transparent text-sm sm:text-base";
+
+/** ---------- Forms ---------- */
 const SignUpForm: React.FC<SignUpProps> = ({
   userName,
   userEmail,
@@ -42,156 +59,236 @@ const SignUpForm: React.FC<SignUpProps> = ({
   rememberMe,
   setRememberMe,
 }) => {
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+
   return (
-    <ul className="w-full p-0 flex flex-col gap-4">
-      <li className="w-full h-12 relative">
+    <ul className="w-full p-0 flex flex-col gap-3 sm:gap-4">
+      <li className="w-full relative">
         <input
           required
           type="text"
+          id="name"
           name="name"
-          className="w-full h-full border border-neutral-200 p-2 flex items-center relative rounded-sm pl-10"
-          placeholder={"Name"}
+          className={inputBase}
+          placeholder="Name"
           value={userName}
           onChange={(e) => setUserName(e.target.value)}
         />
-        <label
-          htmlFor={"name"}
-          className="flex items-center gap-2 absolute left-2 top-0 bottom-0 my-0"
-        >
+        <FieldIconLabel htmlFor="name">
           <User2 />
-        </label>
+        </FieldIconLabel>
       </li>
-      <li className="w-full h-12 relative">
+      <li className="w-full relative">
         <input
           required
           type="email"
+          id="email"
           name="email"
-          className="w-full h-full border border-neutral-200 p-2 flex items-center relative rounded-sm pl-10"
-          placeholder={"Email"}
+          className={inputBase}
+          placeholder="Email"
           value={userEmail}
           onChange={(e) => setUserEmail(e.target.value)}
         />
-        <label
-          htmlFor={"email"}
-          className="flex items-center gap-2 absolute left-2 top-0 bottom-0 my-0"
-        >
+        <FieldIconLabel htmlFor="email">
           <Mail />
-        </label>
+        </FieldIconLabel>
       </li>
-      <li className="w-full h-12 relative">
+      <li className="w-full relative">
         <input
           required
-          type="password"
+          type={showPassword ? "text" : "password"}
+          id="password"
           name="password"
-          className="w-full h-full border border-neutral-200 p-2 flex items-center relative rounded-sm pl-10"
-          placeholder={"Password"}
+          className={inputBase}
+          placeholder="Password"
           value={userPassword}
           onChange={(e) => setUserPassword(e.target.value)}
         />
-        <label
-          htmlFor={"password"}
-          className="flex items-center gap-2 absolute left-2 top-0 bottom-0 my-0"
-        >
+        <FieldIconLabel htmlFor="password">
           <LockKeyholeOpen />
-        </label>
+        </FieldIconLabel>
+        <button
+          type="button"
+          onClick={() => setShowPassword((v) => !v)}
+          aria-label={showPassword ? "Hide password" : "Show password"}
+          aria-pressed={showPassword}
+          title={showPassword ? "Hide password" : "Show password"}
+          className="absolute inset-y-0 right-2 my-0 flex items-center justify-center px-2 text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200"
+        >
+          {showPassword ? (
+            <EyeOff className="h-5 w-5" />
+          ) : (
+            <Eye className="h-5 w-5" />
+          )}
+        </button>
       </li>
-      <li className="w-full h-12 relative">
+      <li className="w-full relative">
         <input
           required
-          type="password"
+          type={showConfirm ? "text" : "password"}
+          id="confirmPassword"
           name="confirmPassword"
-          className="w-full h-full border border-neutral-200 p-2 flex items-center relative rounded-sm pl-10"
-          placeholder={"Confirm Password"}
+          className={inputBase}
+          placeholder="Confirm Password"
           value={userConfirmPassword}
           onChange={(e) => setUserConfirmPassword(e.target.value)}
         />
-        <label
-          htmlFor={"confirmPassword"}
-          className="flex items-center gap-2 absolute left-2 top-0 bottom-0 my-0"
-        >
+        <FieldIconLabel htmlFor="confirmPassword">
           <LockKeyholeIcon />
-        </label>
+        </FieldIconLabel>
+        <button
+          type="button"
+          onClick={() => setShowConfirm((v) => !v)}
+          aria-label={showConfirm ? "Hide password" : "Show password"}
+          aria-pressed={showConfirm}
+          title={showConfirm ? "Hide password" : "Show password"}
+          className="absolute inset-y-0 right-2 my-0 flex items-center justify-center px-2 text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200"
+        >
+          {showConfirm ? (
+            <EyeOff className="h-5 w-5" />
+          ) : (
+            <Eye className="h-5 w-5" />
+          )}
+        </button>
       </li>
       <li className="w-full relative flex items-center">
         <input
+          id="rememberSignUp"
           type="checkbox"
+          className="h-4 w-4"
           checked={rememberMe}
           onChange={(e) => setRememberMe(e.target.checked)}
         />
-        <label className="ml-2 text-sm">Remember Me</label>
+        <label htmlFor="rememberSignUp" className="ml-2 text-xs sm:text-sm">
+          Remember Me
+        </label>
       </li>
     </ul>
   );
 };
 
 const LoginForm: React.FC<SignUpProps> = ({
-  userName,
   userEmail,
   userPassword,
-  userConfirmPassword,
-  setUserName,
+  rememberMe,
   setUserEmail,
   setUserPassword,
-  setUserConfirmPassword,
-  rememberMe,
   setRememberMe,
 }) => {
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
   return (
-    <ul className="w-full p-0 flex flex-col gap-4">
-      <li className="w-full h-12 relative">
+    <ul className="w-full p-0 flex flex-col gap-3 sm:gap-4">
+      <li className="w-full relative">
         <input
           required
           type="email"
+          id="loginEmail"
           name="email"
-          className="w-full h-full border border-neutral-200 p-2 flex items-center relative rounded-sm pl-10"
-          placeholder={"Email"}
+          className={inputBase}
+          placeholder="Email"
           value={userEmail}
           onChange={(e) => setUserEmail(e.target.value)}
         />
-        <label
-          htmlFor={"email"}
-          className="flex items-center gap-2 absolute left-2 top-0 bottom-0 my-0"
-        >
+        <FieldIconLabel htmlFor="loginEmail">
           <Mail />
-        </label>
+        </FieldIconLabel>
       </li>
-      <li className="w-full h-12 relative">
+      <li className="w-full relative">
         <input
           required
-          type="password"
+          type={showLoginPassword ? "text" : "password"}
+          id="loginPassword"
           name="password"
-          className="w-full h-full border border-neutral-200 p-2 flex items-center relative rounded-sm pl-10"
-          placeholder={"Password"}
+          className={inputBase}
+          placeholder="Password"
           value={userPassword}
           onChange={(e) => setUserPassword(e.target.value)}
         />
-        <label
-          htmlFor={"password"}
-          className="flex items-center gap-2 absolute left-2 top-0 bottom-0 my-0"
-        >
+        <FieldIconLabel htmlFor="loginPassword">
           <LockKeyholeOpen />
-        </label>
+        </FieldIconLabel>
+        <button
+          type="button"
+          onClick={() => setShowLoginPassword((v) => !v)}
+          aria-label={showLoginPassword ? "Hide password" : "Show password"}
+          aria-pressed={showLoginPassword}
+          title={showLoginPassword ? "Hide password" : "Show password"}
+          className="absolute inset-y-0 right-2 my-0 flex items-center justify-center px-2 text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200"
+        >
+          {showLoginPassword ? (
+            <EyeOff className="h-5 w-5" />
+          ) : (
+            <Eye className="h-5 w-5" />
+          )}
+        </button>
       </li>
       <li className="w-full relative flex items-center">
         <input
+          id="rememberLogin"
           type="checkbox"
+          className="h-4 w-4"
           checked={rememberMe}
           onChange={(e) => setRememberMe(e.target.checked)}
         />
-        <label className="ml-2 text-sm">Remember Me</label>
+        <label htmlFor="rememberLogin" className="ml-2 text-xs sm:text-sm">
+          Remember Me
+        </label>
       </li>
     </ul>
   );
 };
 
+/** ---------- Segmented Toggle (replaces Switch) ---------- */
+const SegmentedAuthToggle: React.FC<{
+  isLogin: boolean;
+  setIsLogin: (v: boolean) => void;
+}> = ({ isLogin, setIsLogin }) => {
+  return (
+    <div className="relative w-full max-w-[460px]">
+      <div
+        role="tablist"
+        aria-label="Auth mode"
+        className="relative grid grid-cols-2 items-center rounded-full bg-lime-500/20 p-1 h-[80px] cursor-pointer"
+      >
+        {/* Active pill */}
+        <span
+          aria-hidden
+          className={`pointer-events-none absolute inset-y-1 w-1/2 rounded-full bg-lime-500 transition-all duration-200 ease-out ${
+            isLogin ? "left-1" : "left-1/2"
+          }`}
+        />
+        {/* Buttons */}
+        <button
+          role="tab"
+          aria-selected={isLogin}
+          className={`relative z-10 h-12 sm:h-14 rounded-full text-sm sm:text-base md:text-lg font-medium tracking-wide transition-colors cursor-pointer ${
+            isLogin ? "text-lime-800" : "text-white/80 hover:text-white"
+          }`}
+          onClick={() => setIsLogin(true)}
+        >
+          Login
+        </button>
+        <button
+          role="tab"
+          aria-selected={!isLogin}
+          className={`relative z-10 h-12 sm:h-14 rounded-full text-sm sm:text-base md:text-lg font-medium tracking-wide transition-colors cursor-pointer ${
+            !isLogin ? "text-lime-800" : "text-white/80 hover:text-white"
+          }`}
+          onClick={() => setIsLogin(false)}
+        >
+          Sign up
+        </button>
+      </div>
+    </div>
+  );
+};
+
+/** ---------- Page ---------- */
 const page = (props: Props) => {
   const [isLogin, setIsLogin] = useState(true);
-
-  const toggleLogin = () => {
-    setIsLogin(!isLogin);
-  };
-
   const route = useRouter();
+  const { register, login } = useAuth();
 
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
@@ -199,105 +296,85 @@ const page = (props: Props) => {
   const [userConfirmPassword, setUserConfirmPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
 
-  const handleFormSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    //handle
-    console.log("User items: ", {
-      userName: userName,
-      userEmail: userEmail,
-      userPassword: userPassword.length,
-      confirmPassword: userConfirmPassword.length,
-      rememberMe: rememberMe,
-    });
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  const handleFormSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setErrorMsg(null);
     try {
+      setSubmitting(true);
+
       if (isLogin) {
-        if (!userEmail || userEmail === "") {
-          throw new Error("Missing Email field");
-        } else if (!userPassword || userPassword === "") {
-          throw new Error("Missing Password field");
-        } else if (userPassword.length < 6) {
+        if (!userEmail) throw new Error("Missing Email field");
+        if (!userPassword) throw new Error("Missing Password field");
+        if (userPassword.length < 6)
           throw new Error("Password length is too short");
-        } else {
-          route.push("/dash/workouts");
-        }
+
+        await login(userEmail, userPassword);
+        route.replace("/dash/workouts"); // replace, not push
       } else {
-        if (!userName || userName === "") {
-          throw new Error("Missing Name field");
-        } else if (!userEmail || userEmail === "") {
-          throw new Error("Missing Email field");
-        } else if (!userPassword || userPassword === "") {
-          throw new Error("Missing Password field");
-        } else if (userPassword.length < 6) {
+        if (!userName) throw new Error("Missing Name field");
+        if (!userEmail) throw new Error("Missing Email field");
+        if (!userPassword) throw new Error("Missing Password field");
+        if (userPassword.length < 6)
           throw new Error("Password length is too short");
-        } else if (userPassword != userConfirmPassword) {
+        if (userPassword !== userConfirmPassword)
           throw new Error("Passwords do not match");
-        } else {
-          route.push("/dash/workouts");
-        }
+
+        await register(userName, userEmail, userPassword);
+        route.replace("/dash/workouts"); // replace, not push
       }
-    } catch (error: unknown) {
-      console.log(error);
-      if (error instanceof Error) {
-        return alert(`An error occured: ${error.message}`);
-      } else {
-        return alert(`An error occured: ${String(error)}`);
-      }
+    } catch (error: any) {
+      // show server-provided message if available
+      setErrorMsg(error?.message || "Something went wrong");
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
     <PageContainer>
+      <Alert
+        open={!!errorMsg}
+        onClose={() => setErrorMsg(null)}
+        title="Oops!"
+        message={errorMsg ?? ""}
+        variant="error"
+        autoCloseMs={4000}
+      />
       <MainHeader hasDetails={false} />
-      <div className="w-full p-4 pt-8 lg:pt-12 flex flex-col gap-4 items-center max-w-[500px] mx-auto my-0">
-        <div className="flex flex-col w-full h-fit text-center gap-2">
-          <h1 className="text-5xl xl:text-6xl text-center">
+      <div className="w-full px-4 pt-6 sm:pt-8 flex flex-col gap-4 items-center max-w-[520px] mx-auto">
+        <div className="flex flex-col w-full text-center gap-2">
+          <h1 className="text-3xl sm:text-5xl text-center">
             {isLogin ? "Welcome Back!" : "Welcome to FitForge!"}
           </h1>
-          <p className="py-4 text-lg xl:text-xl text-pretty">
+          <p className="py-3 sm:py-4 text-base sm:text-lg text-pretty">
             {isLogin
               ? "Let's keep crushing your health & fitness goals"
               : "Register to start your health & fitness journey with us."}
           </p>
         </div>
-        <Switch
-          checked={isLogin}
-          onChange={toggleLogin}
-          className={` cursor-pointer p-4 relative flex justify-between gap-4 items-center h-[72px] w-full max-w-[400px] min-w-[300px] rounded-full bg-lime-500/20 transition-colors duration-200 ease-out`}
-        >
-          <span className="sr-only">Toggle theme</span>
-          <span className="w-full p-4 h-full bg-transparent z-10 flex items-center text-center justify-center font-medium text-lg tracking-wide">
-            Login
-          </span>
-          <span className="w-full p-4 h-full bg-transparent z-10 flex items-center text-center justify-center font-medium text-lg tracking-wide">
-            Sign up
-          </span>
-          <span
-            className={`absolute z-0
-             inline-block h-[56px] w-full min-w-[145px] max-w-[180px] transform rounded-full bg-lime-500 transition-transform duration-200 ease-out ${
-               isLogin ? "translate-x-0" : "translate-x-[105%]"
-             }`}
-          ></span>
-        </Switch>
+
+        <SegmentedAuthToggle isLogin={isLogin} setIsLogin={setIsLogin} />
+
         <form
-          onSubmit={(e) => handleFormSubmit(e)}
-          className="w-full flex flex-col gap-2 items-center mt-8"
+          onSubmit={handleFormSubmit}
+          className="w-full flex flex-col gap-3 sm:gap-4 items-center mt-6 sm:mt-8"
         >
           {isLogin ? (
-            <ul className="w-full p-0 flex flex-col gap-4">
-              <LoginForm
-                userName={userName}
-                setUserName={setUserName}
-                userEmail={userEmail}
-                setUserEmail={setUserEmail}
-                userPassword={userPassword}
-                setUserPassword={setUserPassword}
-                userConfirmPassword={userConfirmPassword}
-                setUserConfirmPassword={setUserConfirmPassword}
-                rememberMe={rememberMe}
-                setRememberMe={setRememberMe}
-              />
-            </ul>
+            <LoginForm
+              userName={userName}
+              setUserName={setUserName}
+              userEmail={userEmail}
+              setUserEmail={setUserEmail}
+              userPassword={userPassword}
+              setUserPassword={setUserPassword}
+              userConfirmPassword={userConfirmPassword}
+              setUserConfirmPassword={setUserConfirmPassword}
+              rememberMe={rememberMe}
+              setRememberMe={setRememberMe}
+            />
           ) : (
             <SignUpForm
               userName={userName}
@@ -312,11 +389,19 @@ const page = (props: Props) => {
               setRememberMe={setRememberMe}
             />
           )}
+
           <button
+            disabled={submitting}
             type="submit"
-            className="w-full cursor-pointer max-w-[400px] min-w-[300px] h-[72px] rounded-[64px] mt-8 flex items-center justify-center text-center bg-black hover:bg-black/75 text-white font-semibold tracking-wide"
+            className="w-full h-14 sm:h-20 rounded-full mt-6 sm:mt-8 text-base md:text-lg cursor-pointer flex items-center justify-center text-center bg-black hover:bg-black/80 text-white font-semibold tracking-wide"
           >
-            {isLogin ? "Login" : "Sign up"}
+            {isLogin
+              ? submitting
+                ? "Logging In..."
+                : "Login"
+              : submitting
+              ? "Creating Account..."
+              : "Sign up"}
           </button>
         </form>
       </div>
@@ -325,3 +410,4 @@ const page = (props: Props) => {
 };
 
 export default page;
+``;
