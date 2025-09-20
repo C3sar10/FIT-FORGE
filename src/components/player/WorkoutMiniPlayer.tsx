@@ -1,6 +1,8 @@
 "use client";
 
 import { useWorkoutGlobal } from "@/context/WorkoutContext";
+import { api } from "@/lib/api";
+import { ExerciseType, WorkoutType } from "@/types/workout";
 import { CheckSquareIcon, MoreHorizontal, Pause } from "lucide-react";
 import React, { useEffect, useState } from "react";
 
@@ -16,6 +18,7 @@ const WorkoutMiniPlayer = (props: Props) => {
   } = useWorkoutGlobal();
 
   const [isVisible, setIsVisible] = useState(true);
+  const [workoutData, setWorkoutData] = useState<WorkoutType | null>(null);
 
   const handleMiniClick = () => {
     console.log("Mini player open: ", isWorkoutPlayerOpen);
@@ -35,7 +38,18 @@ const WorkoutMiniPlayer = (props: Props) => {
     }, 300); // 300ms animation duration
   };
 
-  useEffect(() => {}, []);
+  const fetchWorkoutDetails = async (id: string) => {
+    const res = await api(`/workouts/${id}`); // uses your existing route
+    const data = await res.json();
+    console.log("Workout data: ", data);
+    setWorkoutData(data);
+  };
+
+  useEffect(() => {
+    if (!isWorkoutPlayerOpen && currWorkoutId) {
+      fetchWorkoutDetails(currWorkoutId);
+    }
+  }, [isWorkoutPlayerOpen, currWorkoutId]);
 
   if (isWorkoutPlayerOpen || currWorkoutId === null) {
     return null;
@@ -43,7 +57,6 @@ const WorkoutMiniPlayer = (props: Props) => {
 
   return (
     <div
-      onClick={handleMiniClick}
       className={`fixed top-[-80px] z-[50] w-full bg-black/90 text-white p-4 border-b border-neutral-200 flex items-center justify-between h-[80px]
         ${
           isVisible
@@ -52,17 +65,27 @@ const WorkoutMiniPlayer = (props: Props) => {
         }
     `}
     >
-      <div className="flex h-full items-center gap-4">
-        <div className="aspect-square h-full rounded-sm w-auto bg-neutral-200"></div>
+      <div
+        onClick={handleMiniClick}
+        className="flex w-full h-full items-center gap-4"
+      >
+        <div className="aspect-square h-full rounded-sm w-auto bg-neutral-200">
+          {workoutData?.image && (
+            <img
+              src={workoutData.image}
+              className="w-full h-full object-cover"
+            />
+          )}
+        </div>
         <div className="flex flex-col items-start">
-          <h2 className="text-lg">Workout Name</h2>
+          <h2 className="text-base sm:text-lg">{workoutData?.name}</h2>
           <p className="text-sm tracking-wider">00:00:00</p>
         </div>
       </div>
-      <div className="flex items-center gap-4">
-        <Pause size={24} fill="white" className="hover:text-lime-500" />
-        <CheckSquareIcon size={24} className="hover:text-lime-500" />
-        <MoreHorizontal size={24} className="hover:text-lime-500" />
+      <div className="flex items-center gap-2">
+        <Pause size={20} fill="white" className="hover:text-lime-500" />
+        <CheckSquareIcon size={20} className="hover:text-lime-500" />
+        <MoreHorizontal size={20} className="hover:text-lime-500" />
       </div>
     </div>
   );
