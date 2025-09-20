@@ -1,5 +1,6 @@
 import { span } from "framer-motion/client";
 import { useTheme } from "next-themes";
+import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 
 type Props = {
@@ -13,7 +14,7 @@ const LargeFeatureCards: React.FC<Props> = ({ title, tags, imageUrl, id }) => {
   const { theme, setTheme } = useTheme();
   const [isLight, setIsLight] = useState(theme === "light");
 
-  console.log(title + " " + imageUrl);
+  const router = useRouter();
 
   useEffect(() => {
     setIsLight(theme === "light");
@@ -21,6 +22,7 @@ const LargeFeatureCards: React.FC<Props> = ({ title, tags, imageUrl, id }) => {
 
   return (
     <div
+      onClick={() => router.push(`/startworkout/${id}`)}
       className={`aspect-video relative h-full w-auto min-h-[140px] cursor-pointer
         ${
           isLight

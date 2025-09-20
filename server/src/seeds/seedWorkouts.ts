@@ -56,6 +56,7 @@ function buildWorkoutDoc(seed: WSeed, titleToId: Map<string, Types.ObjectId>) {
     blocks: seed.blocks.map((b) => ({
       title: b.title,
       items: b.items.map((it) => ({
+        name: it.t,
         exerciseId: titleToId.get(it.t)!,
         sets: it.sets,
         reps: it.reps,

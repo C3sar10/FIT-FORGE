@@ -7,6 +7,7 @@ const WorkoutItemSchema = new Schema(
       ref: "Exercise",
       required: true,
     },
+    name: { type: String },
     sets: { type: Number }, // if omitted, use exercise defaults
     reps: { type: Schema.Types.Mixed },
     restSecs: { type: Number },

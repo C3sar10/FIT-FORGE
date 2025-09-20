@@ -1,5 +1,6 @@
 // src/app/(private)/layout.tsx
 "use client";
+import WorkoutPlayer from "@/components/player/WorkoutPlayer";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";

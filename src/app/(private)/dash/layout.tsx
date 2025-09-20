@@ -8,6 +8,8 @@ import { useState } from "react";
 import NavigationMenu from "@/components/ui/NavigationMenu";
 import { MenuProvider } from "@/context/MenuContext";
 import MainHeader from "@/components/ui/MainHeader";
+import WorkoutPlayer from "@/components/player/WorkoutPlayer";
+import WorkoutMiniPlayer from "@/components/player/WorkoutMiniPlayer";
 
 export default function RootLayout({
   children,
@@ -21,6 +23,7 @@ export default function RootLayout({
         <main className="w-full h-full min-h-dvh pb-[100px]">{children}</main>
         <NavigationMenu />
         <FooterNavigation />
+        <WorkoutPlayer />
       </PageContainer>
     </MenuProvider>
   );

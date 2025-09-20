@@ -19,7 +19,7 @@ const FeaturedWorkoutsSection = (props: Props) => {
   const fetchFeatureWorkouts = async () => {
     const res = await api("/workouts?scope=all&limit=50"); // uses your existing route
     const data = await res.json(); // { items: [...] }
-    console.log("data from response: ", data);
+    //console.log("data from response: ", data);
     const featuredPool = (data.items ?? []).filter((w: any) =>
       (w.tags ?? []).includes("featured")
     );
@@ -30,7 +30,7 @@ const FeaturedWorkoutsSection = (props: Props) => {
       [featuredPool[i], featuredPool[j]] = [featuredPool[j], featuredPool[i]];
     }
     const featuredFive = featuredPool.slice(0, 5);
-    console.log(featuredFive);
+    //console.log(featuredFive);
     setFeaturedList(featuredFive);
   };
 

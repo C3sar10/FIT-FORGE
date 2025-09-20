@@ -6,6 +6,7 @@ import { Metadata } from "next";
 import { roboto } from "@/lib/fonts";
 import "@/lib/amplify"; // Add this
 import { AuthProvider } from "@/context/AuthContext";
+import { WorkoutProvider } from "@/context/WorkoutContext";
 
 export const metadata: Metadata = {
   title: "My App",
@@ -23,7 +24,7 @@ export default function RootLayout({
       <body className="">
         <AuthProvider>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-            {children}
+            <WorkoutProvider>{children}</WorkoutProvider>
           </ThemeProvider>
         </AuthProvider>
       </body>
