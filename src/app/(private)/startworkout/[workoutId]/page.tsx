@@ -1,6 +1,7 @@
 "use client";
 import PageContainer from "@/components/ui/PageContainer";
 import ExerciseLi from "@/components/workouts/ExerciseLi";
+import { useTimer } from "@/context/TimerContext";
 import { useWorkoutGlobal } from "@/context/WorkoutContext";
 import { api } from "@/lib/api";
 import { ExerciseType, WorkoutType } from "@/types/workout";
@@ -103,12 +104,16 @@ const StartWorkoutBody: React.FC<BodyProps> = ({ exerciseList, workoutId }) => {
     setCurrWorkoutId,
     setPlayerState,
   } = useWorkoutGlobal();
+  const { state, start } = useTimer();
   const router = useRouter();
 
   const handleStart = () => {
     if (currWorkoutId === null) {
       setPlayerState("play");
       setCurrWorkoutId(workoutId);
+
+      if (state.status === "idle") start(workoutId);
+
       router.back();
       toggleWorkoutPlayer();
     }

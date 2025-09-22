@@ -2,12 +2,10 @@
 "use client";
 import React, {
   createContext,
-  useCallback,
   useContext,
   useEffect,
   useMemo,
-  useRef,
-  useState,
+  useReducer,
 } from "react";
 
 type TimerStatus = "idle" | "running" | "paused";
@@ -15,75 +13,147 @@ type TimerStatus = "idle" | "running" | "paused";
 type TimerState = {
   status: TimerStatus;
   workoutId: string | null;
-  startedAt: number | null; // epoch ms when Start was hit
-  pausedAccumMs: number; // total ms spent paused
-  lastPausedAt: number | null; // epoch ms when paused was pressed
-  nowSec: number; // integer seconds heartbeat
+
+  startedAt: number | null; // epoch ms
+  pausedAccumMs: number; // total paused ms so far
+  lastPausedAt: number | null; // epoch ms when pause started (if paused)
+
+  nowSec: number; // integer seconds heartbeat (for throttled renders)
 };
 
-type TimerActions = {
+type Action =
+  | { type: "TICK"; nowSec: number }
+  | { type: "START"; workoutId: string; now: number }
+  | { type: "PAUSE"; now: number }
+  | { type: "RESUME"; now: number }
+  | { type: "END" }
+  | { type: "HYDRATE"; payload: Partial<TimerState> };
+
+const initialState: TimerState = {
+  status: "idle",
+  workoutId: null,
+  startedAt: null,
+  pausedAccumMs: 0,
+  lastPausedAt: null,
+  nowSec: Math.floor(Date.now() / 1000),
+};
+
+function reducer(state: TimerState, action: Action): TimerState {
+  switch (action.type) {
+    case "TICK":
+      return { ...state, nowSec: action.nowSec };
+
+    case "START":
+      return {
+        ...state,
+        status: "running",
+        workoutId: action.workoutId,
+        startedAt: action.now,
+        pausedAccumMs: 0,
+        lastPausedAt: null,
+      };
+
+    case "PAUSE":
+      if (state.status !== "running") return state;
+      return { ...state, status: "paused", lastPausedAt: action.now };
+
+    case "RESUME":
+      if (state.status !== "paused") return state;
+      if (!state.lastPausedAt)
+        return { ...state, status: "running", lastPausedAt: null };
+      return {
+        ...state,
+        status: "running",
+        pausedAccumMs: state.pausedAccumMs + (action.now - state.lastPausedAt),
+        lastPausedAt: null,
+      };
+
+    case "END":
+      return {
+        ...state,
+        status: "idle",
+        workoutId: null,
+        startedAt: null,
+        pausedAccumMs: 0,
+        lastPausedAt: null,
+      };
+
+    case "HYDRATE":
+      return { ...state, ...action.payload };
+
+    default:
+      return state;
+  }
+}
+
+const TimerContext = createContext<{
+  state: TimerState;
   start: (workoutId: string) => void;
   pause: () => void;
   resume: () => void;
   end: () => void;
-
   getElapsedMs: () => number;
-};
+} | null>(null);
 
-const TimerContext = createContext<(TimerState & TimerActions) | null>(null);
+const STORAGE_KEY = "fitforge-timer";
 
-function loadPersisted() {
+function loadPersisted(): Partial<TimerState> | null {
   try {
-    const raw = localStorage.getItem("fitforge-timer");
-    if (!raw) return null;
-    return JSON.parse(raw);
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
   }
 }
 
-function persist(state: Partial<TimerState>) {
+function persistState(state: TimerState) {
+  // persist only durable fields (not nowSec)
+  const { status, workoutId, startedAt, pausedAccumMs, lastPausedAt } = state;
   try {
-    const raw = localStorage.getItem("fitforge-timer");
-    const prev = raw ? JSON.parse(raw) : {};
     localStorage.setItem(
-      "fitforge-timer",
-      JSON.stringify({ ...prev, ...state })
+      STORAGE_KEY,
+      JSON.stringify({
+        status,
+        workoutId,
+        startedAt,
+        pausedAccumMs,
+        lastPausedAt,
+      })
     );
   } catch {}
 }
 
 export function TimerProvider({ children }: { children: React.ReactNode }) {
-  const persisted = useRef(loadPersisted());
+  const [state, dispatch] = useReducer(reducer, initialState);
 
-  const [status, setStatus] = useState<TimerStatus>(
-    persisted.current?.status ?? "idle"
-  );
-  const [workoutId, setWorkoutId] = useState<string | null>(
-    persisted.current?.workoutId ?? null
-  );
-  const [startedAt, setStartedAt] = useState<number | null>(
-    persisted.current?.startedAt ?? null
-  );
-  const [pausedAccumMs, setPausedAccumMs] = useState<number>(
-    persisted.current?.pausedAccumMs ?? 0
-  );
-  const [lastPausedAt, setLastPausedAt] = useState<number | null>(
-    persisted.current?.lastPausedAt ?? null
-  );
+  // Hydrate once on mount
+  useEffect(() => {
+    const persisted = loadPersisted();
+    if (persisted) dispatch({ type: "HYDRATE", payload: persisted });
+  }, []);
 
-  // 1Hz heartbeat, aligned to second boundaries, single source of re-render
-  const [nowSec, setNowSec] = useState<number>(() =>
-    Math.floor(Date.now() / 1000)
-  );
+  // Persist on important changes
+  useEffect(() => {
+    persistState(state);
+  }, [
+    state.status,
+    state.workoutId,
+    state.startedAt,
+    state.pausedAccumMs,
+    state.lastPausedAt,
+  ]);
+
+  // 1 Hz heartbeat aligned to the next second
   useEffect(() => {
     let tId: any, iId: any;
     const align = () => {
       const ms = Date.now();
       const wait = 1000 - (ms % 1000);
       tId = setTimeout(() => {
-        setNowSec(Math.floor(Date.now() / 1000));
-        iId = setInterval(() => setNowSec(Math.floor(Date.now() / 1000)), 1000);
+        dispatch({ type: "TICK", nowSec: Math.floor(Date.now() / 1000) });
+        iId = setInterval(() => {
+          dispatch({ type: "TICK", nowSec: Math.floor(Date.now() / 1000) });
+        }, 1000);
       }, wait);
     };
     align();
@@ -93,84 +163,26 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // Persist minimal state whenever core fields change
-  useEffect(() => {
-    persist({ status, workoutId, startedAt, pausedAccumMs, lastPausedAt });
-  }, [status, workoutId, startedAt, pausedAccumMs, lastPausedAt]);
+  // Actions (use reducer so no stale closures)
+  const start = (workoutId: string) =>
+    dispatch({ type: "START", workoutId, now: Date.now() });
+  const pause = () => dispatch({ type: "PAUSE", now: Date.now() });
+  const resume = () => dispatch({ type: "RESUME", now: Date.now() });
+  const end = () => dispatch({ type: "END" });
 
-  const getElapsedMs = useCallback(() => {
+  // Derived elapsed (using current state only)
+  const getElapsedMs = () => {
+    const { status, startedAt, pausedAccumMs, lastPausedAt } = state;
     if (!startedAt) return 0;
     if (status === "running") return Date.now() - startedAt - pausedAccumMs;
     if (status === "paused" && lastPausedAt)
       return lastPausedAt - startedAt - pausedAccumMs;
     return 0;
-  }, [status, startedAt, pausedAccumMs, lastPausedAt]);
-
-  const start = useCallback((id: string) => {
-    setWorkoutId(id);
-    setStatus("running");
-    const now = Date.now();
-    setStartedAt(now);
-    setPausedAccumMs(0);
-    setLastPausedAt(null);
-  }, []);
-
-  const pause = useCallback(() => {
-    setStatus((s) => {
-      if (s !== "running") return s;
-      setLastPausedAt(Date.now());
-      return "paused";
-    });
-  }, []);
-
-  const resume = useCallback(() => {
-    setStatus((s) => {
-      if (s !== "paused") return s;
-      setPausedAccumMs((acc) => {
-        if (!lastPausedAt) return acc;
-        return acc + (Date.now() - lastPausedAt);
-      });
-      setLastPausedAt(null);
-      return "running";
-    });
-  }, [lastPausedAt]);
-
-  const end = useCallback(() => {
-    // If later you need finalElapsedMs for logging, compute it here using getElapsedMs()
-    setStatus("idle");
-    setWorkoutId(null);
-    setStartedAt(null);
-    setPausedAccumMs(0);
-    setLastPausedAt(null);
-  }, []);
+  };
 
   const value = useMemo(
-    () => ({
-      status,
-      workoutId,
-      startedAt,
-      pausedAccumMs,
-      lastPausedAt,
-      nowSec,
-      start,
-      pause,
-      resume,
-      end,
-      getElapsedMs,
-    }),
-    [
-      status,
-      workoutId,
-      startedAt,
-      pausedAccumMs,
-      lastPausedAt,
-      nowSec,
-      start,
-      pause,
-      resume,
-      end,
-      getElapsedMs,
-    ]
+    () => ({ state, start, pause, resume, end, getElapsedMs }),
+    [state]
   );
 
   return (

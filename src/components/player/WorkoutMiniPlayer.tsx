@@ -4,9 +4,10 @@ import { useWorkoutGlobal } from "@/context/WorkoutContext";
 import { useWorkoutElapsed } from "@/hooks/useWorkoutElapsed";
 import { api } from "@/lib/api";
 import { ExerciseType, WorkoutType } from "@/types/workout";
-import { CheckSquareIcon, MoreHorizontal, Pause } from "lucide-react";
+import { CheckSquareIcon, MoreHorizontal, Pause, Play } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { TimerDisplay } from "./TimerDisplay";
+import { useTimer } from "@/context/TimerContext";
 
 type Props = {};
 
@@ -21,6 +22,8 @@ const WorkoutMiniPlayer = (props: Props) => {
 
   const [isVisible, setIsVisible] = useState(true);
   const [workoutData, setWorkoutData] = useState<WorkoutType | null>(null);
+
+  const { state, start, pause, resume, end } = useTimer();
 
   const { label } = useWorkoutElapsed();
 
@@ -87,8 +90,28 @@ const WorkoutMiniPlayer = (props: Props) => {
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <Pause size={20} fill="white" className="hover:text-lime-500" />
-        <CheckSquareIcon size={20} className="hover:text-lime-500" />
+        {state.status === "running" && (
+          <Pause
+            onClick={pause}
+            size={20}
+            fill="white"
+            className="hover:text-lime-500"
+          />
+        )}
+        {state.status === "paused" && (
+          <Play
+            onClick={resume}
+            size={20}
+            fill="white"
+            className="hover:text-lime-500"
+          />
+        )}
+
+        <CheckSquareIcon
+          onClick={end}
+          size={20}
+          className="hover:text-lime-500"
+        />
         <MoreHorizontal size={20} className="hover:text-lime-500" />
       </div>
     </div>

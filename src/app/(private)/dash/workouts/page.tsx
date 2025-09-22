@@ -11,10 +11,12 @@ const page = (props: Props) => {
   const currentDate = new Date();
   const year = currentDate.getFullYear();
   const month = currentDate.toLocaleString("default", { month: "short" });
-  const day = currentDate.getDay();
+  const day = currentDate.getDate();
   const dayName = currentDate.toLocaleDateString("default", {
     weekday: "long",
   });
+
+  console.log(day);
 
   return (
     <div className="w-full h-full flex flex-col items-center">

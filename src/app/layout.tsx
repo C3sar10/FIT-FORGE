@@ -8,6 +8,7 @@ import "@/lib/amplify"; // Add this
 import { AuthProvider } from "@/context/AuthContext";
 import { WorkoutProvider } from "@/context/WorkoutContext";
 import { TimerProvider } from "@/context/TimerContext";
+import TimerUiBridge from "@/components/player/TimerUiBridge";
 
 export const metadata: Metadata = {
   title: "My App",
@@ -26,7 +27,10 @@ export default function RootLayout({
         <AuthProvider>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
             <TimerProvider>
-              <WorkoutProvider>{children}</WorkoutProvider>
+              <WorkoutProvider>
+                <TimerUiBridge />
+                {children}
+              </WorkoutProvider>
             </TimerProvider>
           </ThemeProvider>
         </AuthProvider>

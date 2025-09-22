@@ -12,44 +12,50 @@ export function TimerControls({
   workoutId,
   className = "",
   labels = { start: "Start", pause: "Pause", play: "Play", end: "End Workout" },
+  onEnd,
 }: {
-  workoutId?: string; // required when starting
+  workoutId?: string;
   className?: string;
   labels?: { start: string; pause: string; play: string; end: string };
+  onEnd?: () => void;
 }) {
-  const { status, start, pause, resume, end } = useTimer();
+  const { state, start, pause, resume, end } = useTimer();
+
+  const handleEnd = () => {
+    end();
+    onEnd?.();
+  };
 
   return (
     <div className={`w-full flex items-center gap-2 ${className}`}>
-      {status === "idle" && (
+      {state.status === "idle" && (
         <button
-          className="w-full flex items-center justify-center text-center h-[64px] rounded-2xl bg-black text-white cursor-pointer"
+          className="w-full h-[54px] rounded-2xl bg-black text-white"
           onClick={() => workoutId && start(workoutId)}
         >
-          <Play className="size-6 mr-2" fill="white" />
           {labels.start}
         </button>
       )}
-      {status === "running" && (
+      {state.status === "running" && (
         <button
-          className="w-full h-[54px] rounded-2xl bg-black text-white cursor-pointer"
+          className="w-full h-[54px] rounded-2xl bg-black text-white"
           onClick={pause}
         >
           {labels.pause}
         </button>
       )}
-      {status === "paused" && (
+      {state.status === "paused" && (
         <button
-          className="w-full h-[54px] rounded-2xl bg-black text-white cursor-pointer"
+          className="w-full h-[54px] rounded-2xl bg-black text-white"
           onClick={resume}
         >
           {labels.play}
         </button>
       )}
-      {(status === "running" || status === "paused") && (
+      {(state.status === "running" || state.status === "paused") && (
         <button
-          className="w-full h-[54px] rounded-2xl bg-red-800 text-white cursor-pointer"
-          onClick={end}
+          className="w-full h-[54px] rounded-2xl bg-red-800 text-white"
+          onClick={handleEnd}
         >
           {labels.end}
         </button>

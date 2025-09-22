@@ -3,13 +3,18 @@ import { useMemo } from "react";
 import { useTimer } from "@/context/TimerContext";
 
 export function useWorkoutElapsed() {
-  const { status, getElapsedMs, nowSec } = useTimer();
-  // nowSec makes this recompute at most once per second
+  const { state, getElapsedMs } = useTimer();
   const elapsedMs = useMemo(
     () => getElapsedMs(),
-    [getElapsedMs, nowSec, status]
+    [
+      state.nowSec,
+      state.status,
+      state.startedAt,
+      state.pausedAccumMs,
+      state.lastPausedAt,
+    ]
   );
-  return { status, elapsedMs, label: msToHMS(elapsedMs) };
+  return { status: state.status, elapsedMs, label: msToHMS(elapsedMs) };
 }
 
 function msToHMS(ms: number) {
