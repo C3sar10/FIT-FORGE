@@ -3,6 +3,13 @@ import "../styles/globals.css";
 
 import { ThemeProvider } from "next-themes";
 import { Metadata } from "next";
+import { roboto } from "@/lib/fonts";
+import "@/lib/amplify"; // Add this
+import { AuthProvider } from "@/context/AuthContext";
+import { WorkoutProvider } from "@/context/WorkoutContext";
+import { TimerProvider } from "@/context/TimerContext";
+import TimerUiBridge from "@/components/player/TimerUiBridge";
+import { DialogProvider } from "@/context/DialogContext";
 
 export const metadata: Metadata = {
   title: "My App",
@@ -16,11 +23,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className={roboto.className} suppressHydrationWarning>
       <body className="">
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          {children}
-        </ThemeProvider>
+        <AuthProvider>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+            <TimerProvider>
+              <WorkoutProvider>
+                <DialogProvider>
+                  <TimerUiBridge />
+                  {children}
+                </DialogProvider>
+              </WorkoutProvider>
+            </TimerProvider>
+          </ThemeProvider>
+        </AuthProvider>
       </body>
     </html>
   );

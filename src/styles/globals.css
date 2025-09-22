@@ -8,3 +8,17 @@
   --primary-color: hsl(85, 85%, 35%);
   --secondary-color: rgb(101, 163, 13, 20%);
 }
+
+body {
+  font-family: "Roboto", cursive;
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+}
