@@ -2,6 +2,7 @@
 import { useWorkoutElapsed } from "@/hooks/useWorkoutElapsed";
 import { useTimer } from "@/context/TimerContext";
 import { Play } from "lucide-react";
+import { useDialog } from "@/context/DialogContext";
 
 export function TimerDisplay({ className = "" }: { className?: string }) {
   const { label } = useWorkoutElapsed();
@@ -21,9 +22,19 @@ export function TimerControls({
 }) {
   const { state, start, pause, resume, end } = useTimer();
 
-  const handleEnd = () => {
-    end();
-    onEnd?.();
+  const { showDialog } = useDialog();
+
+  const handleEnd = async () => {
+    const res = await showDialog({
+      title: "End workout?",
+      message: "Your workout timer will stop and reset.",
+      actions: [
+        { id: "cancel", label: "Cancel", variant: "secondary" },
+        { id: "end", label: "End Workout", variant: "danger" },
+      ],
+    });
+    if (res === "end") end();
+    onEnd?.(); // your bridge will close players, etc.
   };
 
   return (

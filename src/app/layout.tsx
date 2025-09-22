@@ -9,6 +9,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { WorkoutProvider } from "@/context/WorkoutContext";
 import { TimerProvider } from "@/context/TimerContext";
 import TimerUiBridge from "@/components/player/TimerUiBridge";
+import { DialogProvider } from "@/context/DialogContext";
 
 export const metadata: Metadata = {
   title: "My App",
@@ -28,8 +29,10 @@ export default function RootLayout({
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
             <TimerProvider>
               <WorkoutProvider>
-                <TimerUiBridge />
-                {children}
+                <DialogProvider>
+                  <TimerUiBridge />
+                  {children}
+                </DialogProvider>
               </WorkoutProvider>
             </TimerProvider>
           </ThemeProvider>

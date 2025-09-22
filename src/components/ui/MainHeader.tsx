@@ -1,10 +1,13 @@
-import React, { useState } from "react";
+"use client";
+import React, { useEffect, useState } from "react";
 import { LogOutIcon, UserRound } from "lucide-react";
 import { useTheme } from "next-themes";
 import { ChevronUp } from "lucide-react";
 import { ChevronRight } from "lucide-react";
 import ThemeToggle from "./ThemeToggleButton";
 import { useAuth } from "@/context/AuthContext";
+import { useTimer } from "@/context/TimerContext";
+import { useDialog } from "@/context/DialogContext";
 
 type Props = {
   hasDetails: boolean;
@@ -17,8 +20,31 @@ interface UserMenuProps {
 
 const UserMenu: React.FC<UserMenuProps> = ({ isOpen, toggleMenu }) => {
   const { resolvedTheme } = useTheme();
-  const { logout } = useAuth();
+  const { logout, user, loading } = useAuth();
+  const { state, end } = useTimer();
+  const { showDialog } = useDialog();
   const isDark = resolvedTheme === "dark";
+
+  const handleLogOut = async () => {
+    if (state.status !== "idle") {
+      const res = await showDialog({
+        title: "Attention: Workout In Progress",
+        message:
+          "Are you sure you want to Log out? Your workout will stop and end before logging out.",
+        actions: [
+          { id: "cancel", label: "Cancel", variant: "secondary" },
+          { id: "end", label: "End Workout & Exit", variant: "danger" },
+        ],
+      });
+      if (res === "end") {
+        end();
+        logout();
+      } // your bridge will close players, etc.
+    } else {
+      logout();
+    }
+  };
+
   return (
     <div
       className={`${
@@ -39,9 +65,9 @@ const UserMenu: React.FC<UserMenuProps> = ({ isOpen, toggleMenu }) => {
         <ChevronUp size={20} />
       </div>
       <div className="w-full py-3 flex flex-col gap-0 border-b border-neutral-100">
-        <p className="font-medium text-sm">Francisco Perez</p>
+        <p className="font-medium text-sm">{user && user.name}</p>
         <p className="text-sm text-neutral-400 truncate">
-          fperezfrancisco4@gmail.com
+          {user && user.email}
         </p>
         <span className="flex items-center gap-2 pt-2 justify-between">
           <p className="text-sm font-medium">System Theme</p>
@@ -58,7 +84,7 @@ const UserMenu: React.FC<UserMenuProps> = ({ isOpen, toggleMenu }) => {
           <ChevronRight size={16} />
         </li>
         <li
-          onClick={() => logout()}
+          onClick={handleLogOut}
           className="w-full py-3 flex items-center justify-between gap-0 hover:text-red-500 transition-colors ease-out duration-300 cursor-pointer"
         >
           <p className="font-medium text-sm">Log out</p>

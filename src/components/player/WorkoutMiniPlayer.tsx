@@ -8,6 +8,7 @@ import { CheckSquareIcon, MoreHorizontal, Pause, Play } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { TimerDisplay } from "./TimerDisplay";
 import { useTimer } from "@/context/TimerContext";
+import { useDialog } from "@/context/DialogContext";
 
 type Props = {};
 
@@ -24,6 +25,8 @@ const WorkoutMiniPlayer = (props: Props) => {
   const [workoutData, setWorkoutData] = useState<WorkoutType | null>(null);
 
   const { state, start, pause, resume, end } = useTimer();
+
+  const { showDialog } = useDialog();
 
   const { label } = useWorkoutElapsed();
 
@@ -61,6 +64,18 @@ const WorkoutMiniPlayer = (props: Props) => {
   if (isWorkoutPlayerOpen || currWorkoutId === null) {
     return null;
   }
+
+  const handleEndWorkout = async () => {
+    const res = await showDialog({
+      title: "End workout?",
+      message: "Your workout timer will stop and reset.",
+      actions: [
+        { id: "cancel", label: "Cancel", variant: "secondary" },
+        { id: "end", label: "End Workout", variant: "danger" },
+      ],
+    });
+    if (res === "end") end();
+  };
 
   return (
     <div
@@ -108,7 +123,7 @@ const WorkoutMiniPlayer = (props: Props) => {
         )}
 
         <CheckSquareIcon
-          onClick={end}
+          onClick={handleEndWorkout}
           size={20}
           className="hover:text-lime-500"
         />
