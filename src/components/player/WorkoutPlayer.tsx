@@ -10,6 +10,7 @@ import React, { useEffect, useState } from "react";
 import ExerciseLi from "../workouts/ExerciseLi";
 import { useWorkoutGlobal } from "@/context/WorkoutContext";
 import { api } from "@/lib/api";
+import { TimerControls, TimerDisplay } from "./TimerDisplay";
 
 interface ExerciseLiProps {
   exerciseObj: ExerciseType;
@@ -183,15 +184,8 @@ const WorkoutPlayer = (props: Props) => {
           </div>
         </div>
         <div className="w-full flex flex-col items-center gap-2 p-4">
-          <p className="text-2xl tracking-wider">00:00:00</p>
-          <div className="w-full flex items-center gap-2">
-            <button className="w-full h-[54px] rounded-2xl bg-black text-white flex items-center justify-center">
-              <Pause fill="white" />
-            </button>
-            <button className="w-full h-[54px] rounded-2xl bg-red-800 text-white">
-              End Workout
-            </button>
-          </div>
+          <TimerDisplay className="text-2xl md:text-4xl" />
+          <TimerControls workoutId={currWorkoutId ?? undefined} />
         </div>
         <div className="w-full h-full p-4 flex flex-col gap-4">
           <div className="w-full flex flex-col gap-2">

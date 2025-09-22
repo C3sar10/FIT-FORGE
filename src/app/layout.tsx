@@ -7,6 +7,7 @@ import { roboto } from "@/lib/fonts";
 import "@/lib/amplify"; // Add this
 import { AuthProvider } from "@/context/AuthContext";
 import { WorkoutProvider } from "@/context/WorkoutContext";
+import { TimerProvider } from "@/context/TimerContext";
 
 export const metadata: Metadata = {
   title: "My App",
@@ -24,7 +25,9 @@ export default function RootLayout({
       <body className="">
         <AuthProvider>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-            <WorkoutProvider>{children}</WorkoutProvider>
+            <TimerProvider>
+              <WorkoutProvider>{children}</WorkoutProvider>
+            </TimerProvider>
           </ThemeProvider>
         </AuthProvider>
       </body>

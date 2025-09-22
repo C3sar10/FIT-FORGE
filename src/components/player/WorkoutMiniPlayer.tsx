@@ -1,10 +1,12 @@
 "use client";
 
 import { useWorkoutGlobal } from "@/context/WorkoutContext";
+import { useWorkoutElapsed } from "@/hooks/useWorkoutElapsed";
 import { api } from "@/lib/api";
 import { ExerciseType, WorkoutType } from "@/types/workout";
 import { CheckSquareIcon, MoreHorizontal, Pause } from "lucide-react";
 import React, { useEffect, useState } from "react";
+import { TimerDisplay } from "./TimerDisplay";
 
 type Props = {};
 
@@ -19,6 +21,8 @@ const WorkoutMiniPlayer = (props: Props) => {
 
   const [isVisible, setIsVisible] = useState(true);
   const [workoutData, setWorkoutData] = useState<WorkoutType | null>(null);
+
+  const { label } = useWorkoutElapsed();
 
   const handleMiniClick = () => {
     console.log("Mini player open: ", isWorkoutPlayerOpen);
@@ -79,7 +83,7 @@ const WorkoutMiniPlayer = (props: Props) => {
         </div>
         <div className="flex flex-col items-start">
           <h2 className="text-base sm:text-lg">{workoutData?.name}</h2>
-          <p className="text-sm tracking-wider">00:00:00</p>
+          <TimerDisplay />
         </div>
       </div>
       <div className="flex items-center gap-2">
