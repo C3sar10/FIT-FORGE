@@ -12,7 +12,7 @@ const ExerciseSchema = new Schema(
     },
     tags: { type: [String], default: [] },
     description: { type: String },
-    image: { type: String },
+    image: { type: String, default: null },
     demoUrl: { type: String },
     details: {
       sets: { type: Number }, // default sets (optional)

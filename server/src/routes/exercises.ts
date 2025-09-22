@@ -30,7 +30,7 @@ router.get("/", async (req, res) => {
   if (cursor) filter._id = { $gt: new Types.ObjectId(cursor) };
 
   const items = await Exercise.find(filter)
-    .select("author title type tags description details") // narrow the shape
+    //.select("author title type tags description details image") // narrow the shape
     .sort({ _id: 1 })
     .limit(limit + 1)
     .lean();
@@ -46,6 +46,7 @@ router.get("/", async (req, res) => {
     tags: d.tags ?? [],
     description: d.description ?? undefined,
     details: d.details ?? undefined,
+    image: d.image ?? null, // include for cards
   }));
 
   res.json({ items: payload, nextCursor });

@@ -192,6 +192,8 @@ const SEEDS = [
   }),
 ];
 
+// ...same imports & SEEDS as you have above
+
 async function main() {
   const uri = process.env.MONGODB_URI;
   if (!uri) {
@@ -202,21 +204,35 @@ async function main() {
   await mongoose.connect(uri);
   console.log("Mongo connected");
 
-  let inserted = 0;
-  for (const doc of SEEDS) {
-    // Idempotent: only insert if (title, author:'global') not present
-    const res = await Exercise.updateOne(
-      { title: doc.title, author: "global" },
-      { $setOnInsert: doc },
-      { upsert: true }
-    );
-    // @ts-ignore res.upsertedCount exists on the driver result
-    if ((res as any).upsertedCount || (res as any).upsertedId) inserted++;
-  }
+  // Build bulk ops without path conflicts
+  const ops = SEEDS.map((doc) => {
+    // split image from the rest
+    const { image, ...rest } = doc as { image?: string } & Record<string, any>;
+
+    const update: any = { $setOnInsert: rest };
+
+    // only set image when we actually have a value
+    if (typeof image !== "undefined") {
+      update.$set = { image };
+    }
+
+    return {
+      updateOne: {
+        filter: { title: doc.title, author: "global" },
+        update,
+        upsert: true,
+      },
+    };
+  });
+
+  const res = await Exercise.bulkWrite(ops, { ordered: false });
 
   console.log(
-    `Seed complete. Total global exercises: +${inserted} (inserted if missing).`
+    `Seed complete. inserted=${res.upsertedCount || 0}, modified=${
+      res.modifiedCount || 0
+    }, matched=${res.matchedCount || 0}`
   );
+
   await mongoose.disconnect();
 }
 
