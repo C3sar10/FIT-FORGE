@@ -1,3 +1,5 @@
+import { ExerciseApiType } from "@/types/workout";
+
 // src/lib/api.ts
 const BASE = process.env.NEXT_PUBLIC_API_URL!;
 
@@ -32,6 +34,18 @@ export async function api(path: string, init: RequestInit = {}) {
     }
     throw err;
   }
+}
+
+export async function fetchMine(limit = 20, cursor?: string) {
+  const params = new URLSearchParams({
+    scope: "mine",
+    limit: String(limit),
+  });
+  if (cursor) params.append("cursor", cursor);
+
+  const res = await api(`/exercises?${params.toString()}`);
+  const data = await res.json();
+  return data as { items: ExerciseApiType[]; nextCursor: string | null };
 }
 
 /** ---------- NEW: small helpers (no breaking changes) ---------- */

@@ -49,6 +49,49 @@ router.get("/", async (req, res) => {
   res.json({ items: payload, nextCursor });
 });
 
+// ---------- Get one exercise by id ----------
+const IdParam = z.object({
+  id: z
+    .string()
+    .refine((v) => Types.ObjectId.isValid(v), { message: "Invalid id" }),
+});
+
+router.get("/:id", async (req, res) => {
+  const userId = (req as any).user.userId as string;
+
+  // validate route param
+  const { id } = IdParam.parse({ id: req.params.id });
+
+  // only allow viewing your own exercises or global ones
+  const doc = await Exercise.findOne({
+    _id: new Types.ObjectId(id),
+    author: { $in: ["global", userId] },
+  })
+    // optional: keep this in sync with fields you expose elsewhere
+    // .select("author title type tags description details image demoUrl createdAt updatedAt")
+    .lean();
+
+  if (!doc) {
+    return res
+      .status(404)
+      .json({ error: "NOT_FOUND", message: "Exercise not found" });
+  }
+
+  res.json({
+    id: String(doc._id),
+    author: doc.author,
+    title: doc.title,
+    type: doc.type,
+    tags: doc.tags ?? [],
+    description: doc.description ?? "",
+    image: doc.image ?? null,
+    demoUrl: doc.demoUrl ?? null,
+    details: doc.details ?? undefined,
+    createdAt: doc.createdAt,
+    updatedAt: doc.updatedAt,
+  });
+});
+
 // ---------- Create ONE user exercise ----------
 const DetailsSchema = z.object({
   sets: z.number().int().min(1).max(20).optional(),

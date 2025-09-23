@@ -31,6 +31,8 @@ const FeaturedExercisesSection: React.FC<Props> = ({ featuredList }) => {
               tags={item.tags}
               imageUrl={item.image}
               id={item.id}
+              isExercise={true}
+              isWorkout={false}
             />
           ))}
         </div>
