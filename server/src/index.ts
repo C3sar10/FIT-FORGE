@@ -15,7 +15,7 @@ const app = express();
 
 const allowedOrigins = [
   "http://localhost:3000",
-  "https://fit-forge-brown.vercel.app/",
+  "https://fit-forge-drab.vercel.app",
   ,
 ];
 
