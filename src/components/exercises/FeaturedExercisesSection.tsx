@@ -3,7 +3,9 @@ import React, { useEffect, useState } from "react";
 import LargeFeatureCards from "../ui/LargeFeatureCards";
 import { api } from "@/lib/api";
 
-type Props = {};
+type Props = {
+  featuredList: FeaturedItem[];
+};
 
 interface FeaturedItem {
   id: string;
@@ -14,30 +16,7 @@ interface FeaturedItem {
   description: string;
 }
 
-const FeaturedExercisesSection = (props: Props) => {
-  const [featuredList, setFeaturedList] = useState([]);
-
-  // fetch a pool of global+mine, then filter down to tag === "featured"
-  const fetchFeatureExercises = async () => {
-    const res = await api("/exercises?scope=all&limit=20"); // uses your existing route
-    const data = await res.json(); // { items: [...] }
-    console.log("data from response: ", data);
-    const featuredPool = data.items;
-
-    // shuffle then take 5
-    for (let i = featuredPool.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [featuredPool[i], featuredPool[j]] = [featuredPool[j], featuredPool[i]];
-    }
-    const featuredFive = featuredPool.slice(0, 5);
-    //console.log(featuredFive);
-    setFeaturedList(featuredFive);
-  };
-
-  useEffect(() => {
-    fetchFeatureExercises();
-  }, []);
-
+const FeaturedExercisesSection: React.FC<Props> = ({ featuredList }) => {
   return (
     <div className="w-full flex flex-col gap-2 items-start py-4">
       <div className="px-4">

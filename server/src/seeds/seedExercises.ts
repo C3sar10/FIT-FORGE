@@ -2,25 +2,28 @@ import "dotenv/config";
 import mongoose from "mongoose";
 import Exercise from "../models/Exercise";
 
-// Helper to make a seed doc
+// ---------- Seed doc helper types ----------
 type ExerciseSeedOpts = {
   type?: "strength" | "endurance" | "sport" | "speed" | "other";
   tags?: string[];
   description?: string;
   sets?: number;
-  reps?: number | string | null; // allow "6-10" or number
+  reps?: number | string | null;
   durationSecs?: number | null;
   restSecs?: number;
   equipment?: string[];
-  image?: string; // NEW
+  image?: string | null;
+  demoUrl?: string | null;
 };
 
 const ex = (title: string, opts: ExerciseSeedOpts = {}) => ({
-  author: "global",
+  author: "global" as const,
   title,
   type: opts.type ?? "strength",
   tags: opts.tags ?? [],
   description: opts.description ?? "",
+  image: typeof opts.image === "undefined" ? null : opts.image,
+  demoUrl: typeof opts.demoUrl === "undefined" ? null : opts.demoUrl,
   details: {
     sets: opts.sets,
     reps: opts.reps ?? undefined,
@@ -28,14 +31,12 @@ const ex = (title: string, opts: ExerciseSeedOpts = {}) => ({
     restSecs: opts.restSecs,
     equipment: opts.equipment ?? [],
   },
-  image: opts.image, // <-- fixed
 });
 
-// ~20 core movements covering push/pull/legs + accessories
+// ---------- Your seed list ----------
 const SEEDS = [
-  // Upper — Push
   ex("Bench Press", {
-    tags: ["chest", "push", "barbell"],
+    tags: ["chest", "push", "barbell", "featured"],
     description: "Barbell press performed lying on a flat bench.",
     sets: 3,
     reps: "6-10",
@@ -65,7 +66,7 @@ const SEEDS = [
     equipment: ["dumbbells", "bench"],
   }),
   ex("Push-Up", {
-    tags: ["chest", "push", "bodyweight"],
+    tags: ["chest", "push", "bodyweight", "featured"],
     sets: 3,
     reps: "10-20",
     restSecs: 60,
@@ -75,14 +76,14 @@ const SEEDS = [
 
   // Upper — Pull
   ex("Pull-Up", {
-    tags: ["back", "pull", "bodyweight"],
+    tags: ["back", "pull", "bodyweight", "featured"],
     sets: 3,
     reps: "5-10",
     restSecs: 120,
     image: "/exercises/pull-ups.jpg",
   }),
   ex("Lat Pulldown", {
-    tags: ["back", "pull", "machine"],
+    tags: ["back", "pull", "machine", "featured"],
     sets: 3,
     reps: "8-12",
     restSecs: 90,
@@ -113,7 +114,7 @@ const SEEDS = [
 
   // Lower
   ex("Back Squat", {
-    tags: ["legs", "quad", "barbell"],
+    tags: ["legs", "quad", "barbell", "featured"],
     sets: 3,
     reps: "5-8",
     restSecs: 180,
@@ -121,7 +122,7 @@ const SEEDS = [
     image: "/exercises/barbell-squat.jpg",
   }),
   ex("Deadlift", {
-    tags: ["posterior chain", "barbell"],
+    tags: ["posterior chain", "barbell", "featured"],
     sets: 3,
     reps: "3-5",
     restSecs: 180,
@@ -145,7 +146,7 @@ const SEEDS = [
   ex("Walking Lunge", {
     tags: ["legs", "glutes", "dumbbell"],
     sets: 3,
-    reps: "20", // total steps
+    reps: "20",
     restSecs: 90,
     equipment: ["dumbbells"],
     image: "/exercises/walking-lunges.jpg",
@@ -192,7 +193,17 @@ const SEEDS = [
   }),
 ];
 
-// ...same imports & SEEDS as you have above
+// ---------- util: deeply remove undefined keys so replacement is clean ----------
+function stripUndefined<T>(obj: T): T {
+  if (obj === null || typeof obj !== "object") return obj;
+  if (Array.isArray(obj)) return obj.map(stripUndefined) as unknown as T;
+  const out: any = {};
+  for (const [k, v] of Object.entries(obj)) {
+    const val = stripUndefined(v as any);
+    if (typeof val !== "undefined") out[k] = val;
+  }
+  return out;
+}
 
 async function main() {
   const uri = process.env.MONGODB_URI;
@@ -204,33 +215,23 @@ async function main() {
   await mongoose.connect(uri);
   console.log("Mongo connected");
 
-  // Build bulk ops without path conflicts
+  // Build full-document replacements (idempotent, future-proof)
   const ops = SEEDS.map((doc) => {
-    // split image from the rest
-    const { image, ...rest } = doc as { image?: string } & Record<string, any>;
-
-    const update: any = { $setOnInsert: rest };
-
-    // only set image when we actually have a value
-    if (typeof image !== "undefined") {
-      update.$set = { image };
-    }
-
+    const replacement = stripUndefined(doc); // full doc, no undefineds
     return {
-      updateOne: {
-        filter: { title: doc.title, author: "global" },
-        update,
+      replaceOne: {
+        filter: { author: "global", title: doc.title },
+        replacement,
         upsert: true,
       },
     };
   });
 
   const res = await Exercise.bulkWrite(ops, { ordered: false });
-
   console.log(
-    `Seed complete. inserted=${res.upsertedCount || 0}, modified=${
-      res.modifiedCount || 0
-    }, matched=${res.matchedCount || 0}`
+    `Seed complete. inserted=${res.upsertedCount || 0}, matched=${
+      res.matchedCount || 0
+    }, modified=${res.modifiedCount || 0}`
   );
 
   await mongoose.disconnect();

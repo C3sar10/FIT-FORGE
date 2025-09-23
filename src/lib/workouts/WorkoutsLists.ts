@@ -21,6 +21,8 @@ export const WorkoutBrowseDefault = [
   },
   {
     title: "Workout Library",
+    routeUrl: "/dash/workouts/library/exercises",
+    action: true,
   },
   {
     title: "Push/Pull/Legs",
@@ -30,6 +32,8 @@ export const WorkoutBrowseDefault = [
   {
     title: "Exercise Library",
     imgUrl: "/exercise-library-default.jpg",
+    routeUrl: "/dash/workouts/library/exercises",
+    action: true,
   },
   {
     title: "My Workout Groups",

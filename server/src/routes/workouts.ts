@@ -48,7 +48,16 @@ router.post("/", async (req, res, next) => {
     const userId = (req as any).user.userId as string;
     const dto = CreateSchema.parse(req.body);
 
-    // (Optional) ensure all exerciseIds exist & are visible to the user
+    // Optional: uniqueness by name per user
+    const exists = await Workout.exists({ userId, name: dto.name });
+    if (exists) {
+      return res.status(409).json({
+        error: "DUPLICATE",
+        message: "You already have a workout with this name.",
+      });
+    }
+
+    // Ensure all exercises exist & are visible
     const exerciseIds = dto.blocks.flatMap((b) =>
       b.items.map((i) => i.exerciseId)
     );
@@ -57,11 +66,12 @@ router.post("/", async (req, res, next) => {
       _id: { $in: distinct.map((id) => new Types.ObjectId(id)) },
       author: { $in: ["global", userId] },
     });
-    if (found !== distinct.length)
+    if (found !== distinct.length) {
       return res.status(400).json({
         error: "VALIDATION_FAILED",
-        message: "One or more exercises are invalid",
+        message: "One or more exercises are invalid or not accessible.",
       });
+    }
 
     const doc = await Workout.create({
       userId,
@@ -82,9 +92,26 @@ router.post("/", async (req, res, next) => {
       })),
     });
 
-    res
-      .status(201)
-      .json({ id: String(doc._id), ...doc.toObject(), _id: undefined });
+    const out = doc.toObject();
+    res.status(201).json({
+      id: String(out._id),
+      name: out.name,
+      description: out.description ?? "",
+      type: out.type,
+      tags: out.tags ?? [],
+      image: out.image ?? null,
+      isFavorite: !!out.isFavorite,
+      updatedAt: out.updatedAt,
+      blocks: out.blocks?.map((b: any) => ({
+        title: b.title,
+        items: (b.items ?? []).map((i: any) => ({
+          exerciseId: String(i.exerciseId),
+          sets: i.sets ?? null,
+          reps: i.reps ?? null,
+          restSecs: i.restSecs ?? null,
+        })),
+      })),
+    });
   } catch (e) {
     next(e);
   }

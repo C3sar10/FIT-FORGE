@@ -25,6 +25,8 @@ const BrowseSearchContainer = (props: Props) => {
             Icon={item.icon}
             subtitle={item.subtitle}
             imgUrl={item.imgUrl}
+            action={item.action}
+            route={item.routeUrl}
           />
         ))}
       </div>
