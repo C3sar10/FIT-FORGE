@@ -1,14 +1,26 @@
+// src/lib/api.ts
 import { ExerciseApiType } from "@/types/workout";
 
-// src/lib/api.ts
 const BASE = process.env.NEXT_PUBLIC_API_URL!;
 
-async function request(path: string, init: RequestInit = {}) {
-  const res = await fetch(`${BASE}${path}`, {
-    ...init,
+function buildInit(init: RequestInit = {}): RequestInit {
+  const hasBody = typeof init.body !== "undefined" && init.body !== null;
+  const headers = new Headers(init.headers || undefined);
+  if (hasBody && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  return {
+    // Always CORS + send cookies cross-site (vercel -> render)
+    mode: "cors",
     credentials: "include",
-    headers: { "Content-Type": "application/json", ...(init.headers || {}) },
-  });
+    ...init,
+    headers,
+  };
+}
+
+async function request(path: string, init: RequestInit = {}) {
+  const res = await fetch(`${BASE}${path}`, buildInit(init));
 
   if (!res.ok) {
     let msg = "Request failed";
@@ -16,8 +28,7 @@ async function request(path: string, init: RequestInit = {}) {
       const data = await res.json();
       if (data?.message) msg = data.message;
     } catch {}
-    const err = new Error(msg);
-    // @ts-expect-error surface status for UI logic
+    const err = new Error(msg) as Error & { status?: number };
     err.status = res.status;
     throw err;
   }
@@ -28,6 +39,7 @@ export async function api(path: string, init: RequestInit = {}) {
   try {
     return await request(path, init);
   } catch (err: any) {
+    // On 401, try a one-shot refresh, then retry original (cookies included both times)
     if (err?.status === 401 && !path.startsWith("/auth/")) {
       await request("/auth/refresh", { method: "POST" });
       return request(path, init);
@@ -36,21 +48,7 @@ export async function api(path: string, init: RequestInit = {}) {
   }
 }
 
-export async function fetchMine(limit = 20, cursor?: string) {
-  const params = new URLSearchParams({
-    scope: "mine",
-    limit: String(limit),
-  });
-  if (cursor) params.append("cursor", cursor);
-
-  const res = await api(`/exercises?${params.toString()}`);
-  const data = await res.json();
-  return data as { items: ExerciseApiType[]; nextCursor: string | null };
-}
-
-/** ---------- NEW: small helpers (no breaking changes) ---------- */
-
-// Tolerant JSON parse (handles 204/empty bodies)
+// ---------- helpers ----------
 async function safeJson<T = any>(res: Response): Promise<T> {
   if (res.status === 204) return undefined as unknown as T;
   const text = await res.text();
@@ -58,13 +56,11 @@ async function safeJson<T = any>(res: Response): Promise<T> {
   return JSON.parse(text) as T;
 }
 
-// Generic JSON fetcher (GET/POST/etc.) -> parsed JSON
 export async function apiJson<T = any>(path: string, init: RequestInit = {}) {
   const res = await api(path, init);
   return safeJson<T>(res);
 }
 
-// Shorthands for common verbs with JSON bodies
 export const http = {
   get: <T = any>(path: string) => api(path).then(safeJson<T>),
   post: <T = any>(path: string, body?: unknown) =>
@@ -86,7 +82,17 @@ export const http = {
     api(path, { method: "DELETE" }).then(safeJson<T>),
 };
 
-/** ---------- existing auth helpers unchanged (can use http.* if you want) ---------- */
+// ---------- existing usage ----------
+export async function fetchMine(limit = 20, cursor?: string) {
+  const params = new URLSearchParams({ scope: "mine", limit: String(limit) });
+  if (cursor) params.append("cursor", cursor);
+  const res = await api(`/exercises?${params.toString()}`);
+  return (await res.json()) as {
+    items: ExerciseApiType[];
+    nextCursor: string | null;
+  };
+}
+
 export const AuthAPI = {
   me: () => api("/auth/me").then((r) => r.json()),
   register: (body: { name: string; email: string; password: string }) =>
