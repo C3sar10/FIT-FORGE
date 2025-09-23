@@ -9,7 +9,7 @@ const FooterPlusButton = (props: Props) => {
   return (
     <div
       onClick={toggleMenu}
-      className="absolute z-40 -top-8 bg-white text-black size-16 p-2 rounded-full shadow-xl flex items-center justify-center cursor-pointer hover:bg-lime-100 transition-colors ease-out duration-200 border border-black"
+      className="absolute z-50 -top-7 bg-white text-black size-12 sm:size-14 p-2 rounded-full shadow-xl flex items-center justify-center cursor-pointer hover:bg-lime-100 transition-colors ease-out duration-200 border border-black"
     >
       <Plus size={40} />
     </div>

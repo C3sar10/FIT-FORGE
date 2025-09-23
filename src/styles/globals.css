@@ -8,11 +8,16 @@
     --secondary-color: rgb(101, 163, 13, 20%);
 }
 
-.dark {
-    --primary-button: hsl(0, 0%, 0%);
-    --secondary-color: rgb(101, 163, 13, 40%);
+body {
+  font-family: "Roboto", cursive;
 }
 
-/* button {
-    background-color: var(--primary-color);
-} */
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+}
