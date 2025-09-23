@@ -13,12 +13,24 @@ import workoutRouter from "./routes/workouts";
 
 const app = express();
 
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://fit-forge-brown.vercel.app/",
+  ,
+];
+
 app.use(
   cors({
-    origin: env.CORS_ORIGIN,
+    origin(origin, cb) {
+      if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+      return cb(new Error("Not allowed by CORS"));
+    },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
 app.use(morgan("dev"));
 app.use(express.json());
 app.use(cookieParser());
@@ -29,7 +41,6 @@ app.get("/health", (_req, res) => res.json({ ok: true }));
 // routes
 app.use("/auth", authRouter);
 
-// example protected route (later you’ll add workouts/exercises)
 import { requireAuth } from "./middleware/requireAuth";
 app.get("/whoami", requireAuth, (req, res) => {
   res.json({ userId: (req as any).user.userId });
@@ -38,7 +49,7 @@ app.get("/whoami", requireAuth, (req, res) => {
 app.use("/exercises", exerciseRouter);
 app.use("/workouts", workoutRouter);
 
-// error handler (last)
+// error handler
 app.use(
   (err: any, _req: express.Request, res: express.Response, _next: any) => {
     if (err.name === "ZodError") {

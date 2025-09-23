@@ -16,6 +16,31 @@ export interface WorkoutType {
   author: string;
 }
 
+export interface WorkoutItem {
+  name: String;
+  sets: number;
+  reps: String;
+  restSecs: number;
+}
+
+export interface WorkoutApiType {
+  name: string;
+  tags: string[];
+  image?: string;
+  id: string;
+  description: string;
+  author: string;
+  type: String;
+  tags: String[];
+  isFavorite: boolean;
+  blocks: [
+    {
+      title: String;
+      items: WorkoutItem[];
+    }
+  ];
+}
+
 export interface ExerciseApiType {
   author: string;
   description: string;

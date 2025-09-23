@@ -193,4 +193,61 @@ router.post("/:id/favorite", async (req, res) => {
   res.json({ ok: true, isFavorite: updated.isFavorite });
 });
 
+// PATCH /workouts/:id  (owner-only)
+router.patch("/:id", async (req, res, next) => {
+  try {
+    const userId = (req as any).user.userId as string;
+    const id = req.params.id;
+
+    const existing = await Workout.findOne({ _id: id, userId });
+    if (!existing) {
+      return res
+        .status(404)
+        .json({ error: "NOT_FOUND", message: "Workout not found" });
+    }
+
+    // Accept partial payload similar to your Create schema
+    const Partial = CreateSchema.partial();
+    const dto = Partial.parse(req.body);
+
+    if (dto.name !== undefined) existing.name = dto.name;
+    if (dto.description !== undefined)
+      existing.description = dto.description ?? "";
+    if (dto.type !== undefined) existing.type = dto.type;
+    if (dto.tags !== undefined) existing.tags = dto.tags ?? [];
+    if (dto.blocks !== undefined) {
+      existing.blocks = dto.blocks.map((b) => ({
+        title: b.title,
+        items: b.items.map((i) => ({
+          exerciseId: new Types.ObjectId(i.exerciseId),
+          sets: i.sets,
+          reps: i.reps,
+          restSecs: i.restSecs,
+        })),
+      })) as any;
+    }
+
+    await existing.save();
+
+    const out = existing.toObject();
+    res.json({ id: String(out._id), ...out, _id: undefined });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// DELETE /workouts/:id  (owner-only; global not allowed)
+router.delete("/:id", async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const id = req.params.id;
+
+  const deleted = await Workout.findOneAndDelete({ _id: id, userId });
+  if (!deleted) {
+    return res
+      .status(404)
+      .json({ error: "NOT_FOUND", message: "Workout not found or not yours" });
+  }
+  res.status(204).end();
+});
+
 export default router;

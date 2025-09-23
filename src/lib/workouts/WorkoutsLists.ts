@@ -9,6 +9,8 @@ export const WorkoutBrowseDefault = [
   {
     title: "New Workout",
     icon: PlusCircle,
+    action: true,
+    routeUrl: "/build/workout/custom",
   },
   {
     title: "Push/Pull",

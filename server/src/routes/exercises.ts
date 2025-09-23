@@ -168,4 +168,74 @@ router.post("/", async (req, res, next) => {
   }
 });
 
+// PATCH /exercises/:id
+router.patch("/:id", async (req, res, next) => {
+  try {
+    const userId = (req as any).user.userId as string;
+    const { id } = IdParam.parse({ id: req.params.id });
+
+    // allow updating only your own exercise
+    const doc = await Exercise.findOne({ _id: id, author: userId });
+    if (!doc)
+      return res
+        .status(404)
+        .json({ error: "NOT_FOUND", message: "Exercise not found" });
+
+    // Basic shape guard (reuse your CreateExerciseSchema partial)
+    const Partial = CreateExerciseSchema.partial();
+    const dto = Partial.parse(req.body);
+
+    // apply fields conditionally
+    if (dto.title !== undefined) doc.title = dto.title;
+    if (dto.type !== undefined) doc.type = dto.type;
+    if (dto.description !== undefined) doc.description = dto.description ?? "";
+    if (dto.tags !== undefined) doc.tags = dto.tags ?? [];
+    if (dto.image !== undefined) doc.image = dto.image ?? "";
+    if (dto.demoUrl !== undefined) doc.demoUrl = dto.demoUrl ?? null;
+    if (dto.details !== undefined) {
+      doc.details = {
+        ...doc.details,
+        sets: dto.details?.sets,
+        reps: dto.details?.reps,
+        durationSecs: dto.details?.durationSecs,
+        restSecs: dto.details?.restSecs,
+        equipment: dto.details?.equipment ?? [],
+      } as any;
+    }
+
+    await doc.save();
+    const out = doc.toObject();
+    res.json({
+      id: String(out._id),
+      author: out.author,
+      title: out.title,
+      type: out.type,
+      tags: out.tags ?? [],
+      description: out.description ?? "",
+      image: out.image ?? null,
+      demoUrl: out.demoUrl ?? null,
+      details: out.details ?? undefined,
+      createdAt: out.createdAt,
+      updatedAt: out.updatedAt,
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// DELETE /exercises/:id
+router.delete("/:id", async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const { id } = IdParam.parse({ id: req.params.id });
+
+  // Only delete if this user is the owner; global is never deleted here
+  const deleted = await Exercise.findOneAndDelete({ _id: id, author: userId });
+  if (!deleted) {
+    return res
+      .status(404)
+      .json({ error: "NOT_FOUND", message: "Exercise not found or not yours" });
+  }
+  return res.status(204).end();
+});
+
 export default router;
