@@ -14,25 +14,25 @@ const router = Router();
 const setAuthCookies = (res: any, access: string, refresh: string) => {
   res.cookie("ff_access", access, {
     httpOnly: true,
-    secure: isProd,
-    sameSite: "lax",
-    domain: env.COOKIE_DOMAIN,
+    secure: true,
+    sameSite: "none",
+    //domain: env.COOKIE_DOMAIN,
     path: "/",
     maxAge: env.ACCESS_TOKEN_TTL * 1000,
   });
   res.cookie("ff_refresh", refresh, {
     httpOnly: true,
-    secure: isProd,
-    sameSite: "lax",
-    domain: env.COOKIE_DOMAIN,
+    secure: true,
+    sameSite: "none",
+    //domain: env.COOKIE_DOMAIN,
     path: "/auth", // refresh cookie scoped to auth routes
     maxAge: env.REFRESH_TOKEN_TTL * 1000,
   });
 };
 
 const clearAuthCookies = (res: any) => {
-  res.clearCookie("ff_access", { path: "/", domain: env.COOKIE_DOMAIN });
-  res.clearCookie("ff_refresh", { path: "/auth", domain: env.COOKIE_DOMAIN });
+  res.clearCookie("ff_access", { path: "/" });
+  res.clearCookie("ff_refresh", { path: "/auth" });
 };
 
 // --- schemas
