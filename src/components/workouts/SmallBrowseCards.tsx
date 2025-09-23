@@ -2,6 +2,7 @@ import { p } from "framer-motion/client";
 import { LucideIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 
 type CardProps = {
@@ -9,6 +10,8 @@ type CardProps = {
   Icon?: LucideIcon | null;
   subtitle?: string | null;
   imgUrl?: string;
+  action?: boolean;
+  route?: string;
 };
 
 const SmallBrowseCards: React.FC<CardProps> = ({
@@ -16,15 +19,27 @@ const SmallBrowseCards: React.FC<CardProps> = ({
   Icon,
   subtitle,
   imgUrl,
+  action,
+  route,
 }) => {
   const { theme, setTheme } = useTheme();
   const [isLight, setIsLight] = useState(theme === "light");
 
+  const router = useRouter();
+
   useEffect(() => {
     setIsLight(theme === "light");
   }, [theme]);
+
+  const handleAction = () => {
+    if (action) {
+      return router.push(`${route}`);
+    }
+  };
+
   return (
     <div
+      onClick={handleAction}
       className={`aspect-[3/2] relative h-full w-auto cursor-pointer bg-linear-180 from-black to-lime-500 rounded-md border `}
     >
       {imgUrl && (

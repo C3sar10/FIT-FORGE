@@ -8,9 +8,18 @@ type Props = {
   tags: string[];
   imageUrl?: string;
   id: string;
+  isWorkout: boolean;
+  isExercise: boolean;
 };
 
-const LargeFeatureCards: React.FC<Props> = ({ title, tags, imageUrl, id }) => {
+const LargeFeatureCards: React.FC<Props> = ({
+  title,
+  tags,
+  imageUrl,
+  id,
+  isWorkout,
+  isExercise,
+}) => {
   const { theme, setTheme } = useTheme();
   const [isLight, setIsLight] = useState(theme === "light");
 
@@ -20,9 +29,18 @@ const LargeFeatureCards: React.FC<Props> = ({ title, tags, imageUrl, id }) => {
     setIsLight(theme === "light");
   }, [theme]);
 
+  const handleClick = () => {
+    if (isWorkout) {
+      router.push(`/startworkout/${id}`);
+    }
+    if (isExercise) {
+      router.push(`/exercisepreview/${id}`);
+    }
+  };
+
   return (
     <div
-      onClick={() => router.push(`/startworkout/${id}`)}
+      onClick={handleClick}
       className={`aspect-video relative h-full w-auto min-h-[140px] cursor-pointer
         ${
           isLight

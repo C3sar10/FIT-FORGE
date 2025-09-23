@@ -1,5 +1,6 @@
 import { ExerciseType } from "@/types/workout";
 import { Check, ChevronRightIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
 import React from "react";
 
 type Props = {};
@@ -9,8 +10,16 @@ interface ExerciseLiProps {
 }
 
 const ExerciseLi: React.FC<ExerciseLiProps> = ({ exerciseObj }) => {
+  const router = useRouter();
+  const handleExerDetails = () => {
+    router.push(`/exercisepreview/${exerciseObj.exerciseId}`);
+  };
+
   return (
-    <li className="w-full p-2 rounded-md border border-neutral-200 bg-black/50 hover:bg-black/90 cursor-pointer flex items-center justify-between">
+    <li
+      onClick={handleExerDetails}
+      className="w-full p-2 rounded-md border border-neutral-200 bg-black/50 hover:bg-black/90 cursor-pointer flex items-center justify-between"
+    >
       <div className="flex items-center">
         <Check size={28} className="mr-4" />
         <div className="flex flex-col items-start">

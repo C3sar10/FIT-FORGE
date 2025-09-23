@@ -11,6 +11,7 @@ import ExerciseLi from "../workouts/ExerciseLi";
 import { useWorkoutGlobal } from "@/context/WorkoutContext";
 import { api } from "@/lib/api";
 import { TimerControls, TimerDisplay } from "./TimerDisplay";
+import { useRouter } from "next/navigation";
 
 interface ExerciseLiProps {
   exerciseObj: ExerciseType;
@@ -18,6 +19,8 @@ interface ExerciseLiProps {
 
 const LiveExerciseLi: React.FC<ExerciseLiProps> = ({ exerciseObj }) => {
   const [checked, setChecked] = useState(false);
+
+  const router = useRouter();
 
   return (
     <li className="w-full p-2 rounded-md border border-neutral-200 bg-black/50 hover:bg-black/90 cursor-pointer flex items-center justify-between">
@@ -28,7 +31,12 @@ const LiveExerciseLi: React.FC<ExerciseLiProps> = ({ exerciseObj }) => {
           type="checkbox"
           className="size-6 mr-4 bg-transparent border-white"
         />
-        <div className="flex flex-col items-start">
+        <div
+          onClick={() =>
+            router.push(`/exercisepreview/${exerciseObj.exerciseId}`)
+          }
+          className="flex flex-col items-start"
+        >
           <h2
             className={`${
               checked && "line-through text-neutral-400"
@@ -47,7 +55,12 @@ const LiveExerciseLi: React.FC<ExerciseLiProps> = ({ exerciseObj }) => {
           </div>
         </div>
       </div>
-      <ChevronRightIcon className="justify-self-end justify-items-end size-4" />
+      <ChevronRightIcon
+        onClick={() =>
+          router.push(`/exercisepreview/${exerciseObj.exerciseId}`)
+        }
+        className="justify-self-end justify-items-end size-4"
+      />
     </li>
   );
 };

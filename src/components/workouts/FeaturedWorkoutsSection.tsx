@@ -52,6 +52,8 @@ const FeaturedWorkoutsSection = (props: Props) => {
               tags={item.tags}
               imageUrl={item.image}
               id={item.id}
+              isWorkout={true}
+              isExercise={false}
             />
           ))}
         </div>
