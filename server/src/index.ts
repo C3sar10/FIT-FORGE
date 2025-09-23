@@ -13,45 +13,18 @@ import workoutRouter from "./routes/workouts";
 
 const app = express();
 
-const raw = (env as any).CORS_ORIGINS || "";
-const ALLOW = raw
-  .split(",")
-  .map((s: any) => s.trim())
-  .filter(Boolean);
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://fit-forge-drab.vercel.app",
+];
 
-function originAllowed(origin?: string | null) {
-  if (!origin) return true; // allow server-to-server / curl
-  const cleaned = origin.replace(/\/+$/, "").toLowerCase();
-  if (ALLOW.some((a: any) => a.replace(/\/+$/, "").toLowerCase() === cleaned))
-    return true;
-
-  try {
-    const host = new URL(cleaned).host;
-    return ALLOW.some((a: any) => {
-      if (/^\.[a-z0-9.-]+$/.test(a))
-        return host.endsWith(a.slice(1).toLowerCase()); // ".vercel.app"
-      if (/^https?:\/\//i.test(a))
-        return new URL(a).host.toLowerCase() === host; // full URL host match
-      return a.toLowerCase() === host; // bare host
-    });
-  } catch {
-    return false;
-  }
-}
-
-const corsOptions: CorsOptions = {
-  origin(origin, cb) {
-    if (originAllowed(origin)) return cb(null, true);
-    cb(new Error("Not allowed by CORS"));
-  },
+const corsOptions = {
+  origin: allowedOrigins,
   credentials: true,
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
 };
 
 app.use(cors(corsOptions));
-
-// ✅ Fix: use a regex instead of "*" (path-to-regexp no longer accepts bare "*")
+// Preflight for all routes (regex instead of "*")
 app.options(/.*/, cors(corsOptions));
 
 app.use(morgan("dev"));
