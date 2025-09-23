@@ -1,5 +1,5 @@
 import express from "express";
-import cors from "cors";
+import cors, { CorsOptions } from "cors";
 import cookieParser from "cookie-parser";
 import morgan from "morgan";
 import mongoose from "mongoose";
@@ -29,7 +29,7 @@ function originAllowed(origin?: string | null) {
     const host = new URL(cleaned).host;
     return ALLOW.some((a: any) => {
       if (/^\.[a-z0-9.-]+$/.test(a))
-        return host.endsWith(a.slice(1).toLowerCase()); // e.g. ".vercel.app"
+        return host.endsWith(a.slice(1).toLowerCase()); // ".vercel.app"
       if (/^https?:\/\//i.test(a))
         return new URL(a).host.toLowerCase() === host; // full URL host match
       return a.toLowerCase() === host; // bare host
@@ -39,20 +39,20 @@ function originAllowed(origin?: string | null) {
   }
 }
 
-app.use(
-  cors({
-    origin(origin, cb) {
-      if (originAllowed(origin)) return cb(null, true);
-      cb(new Error("Not allowed by CORS"));
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
+const corsOptions: CorsOptions = {
+  origin(origin, cb) {
+    if (originAllowed(origin)) return cb(null, true);
+    cb(new Error("Not allowed by CORS"));
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
 
-// ensure OPTIONS preflights succeed for any route
-app.options("*", cors());
+app.use(cors(corsOptions));
+
+// ✅ Fix: use a regex instead of "*" (path-to-regexp no longer accepts bare "*")
+app.options(/.*/, cors(corsOptions));
 
 app.use(morgan("dev"));
 app.use(express.json());
