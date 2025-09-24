@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import LargeFeatureCards from "../ui/LargeFeatureCards";
 import { api } from "@/lib/api";
+import LargeSkeletonCards from "../ui/LargeSkeletonCards";
 
 type Props = {};
 
@@ -45,17 +46,22 @@ const FeaturedWorkoutsSection = (props: Props) => {
       </div>
       <div className="w-full h-fit px-4">
         <div className="w-full flex items-center gap-4 overflow-x-scroll no-scrollbar h-[150px] min-[375px]:h-[180px] md:h-[220px] lg:h-[280px]">
-          {featuredList.map((item: FeaturedItem) => (
-            <LargeFeatureCards
-              key={item.id}
-              title={item.name}
-              tags={item.tags}
-              imageUrl={item.image}
-              id={item.id}
-              isWorkout={true}
-              isExercise={false}
-            />
-          ))}
+          {featuredList.length > 0 &&
+            featuredList.map((item: FeaturedItem) => (
+              <LargeFeatureCards
+                key={item.id}
+                title={item.name}
+                tags={item.tags}
+                imageUrl={item.image}
+                id={item.id}
+                isWorkout={true}
+                isExercise={false}
+              />
+            ))}
+          {featuredList.length === 0 &&
+            Array(4)
+              .fill(0)
+              .map((item, index) => <LargeSkeletonCards key={index} />)}
         </div>
       </div>
     </div>

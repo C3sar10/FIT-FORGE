@@ -113,6 +113,8 @@ const page = (props: Props) => {
                 title={item.title}
                 subtitle={item.type}
                 imgUrl={item.image}
+                action={true}
+                route={`/exercisepreview/${item.id}`}
               />
             ))}
         </div>

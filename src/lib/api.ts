@@ -3,24 +3,31 @@ import { ExerciseApiType } from "@/types/workout";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL!;
 
-function buildInit(init: RequestInit = {}): RequestInit {
+function buildInit(path: string, init: RequestInit = {}): RequestInit {
   const hasBody = typeof init.body !== "undefined" && init.body !== null;
   const headers = new Headers(init.headers || undefined);
   if (hasBody && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
+  // Add Authorization header if accessToken exists and not an auth route
+  const accessToken =
+    typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
+  const isAuthPath = path.startsWith("/auth/");
+  if (accessToken && !isAuthPath) {
+    headers.set("Authorization", `Bearer ${accessToken}`);
+  }
+
   return {
-    // Always CORS + send cookies cross-site (vercel -> render)
     mode: "cors",
-    credentials: "include",
+    // No credentials: 'include' – we're using Bearer now
     ...init,
     headers,
   };
 }
 
 async function request(path: string, init: RequestInit = {}) {
-  const res = await fetch(`${BASE}${path}`, buildInit(init));
+  const res = await fetch(`${BASE}${path}`, buildInit(path, init));
 
   if (!res.ok) {
     let msg = "Request failed";
@@ -39,10 +46,19 @@ export async function api(path: string, init: RequestInit = {}) {
   try {
     return await request(path, init);
   } catch (err: any) {
-    // On 401, try a one-shot refresh, then retry original (cookies included both times)
+    // On 401, try a one-shot refresh, then retry original
     if (err?.status === 401 && !path.startsWith("/auth/")) {
-      await request("/auth/refresh", { method: "POST" });
-      return request(path, init);
+      const refreshToken = localStorage.getItem("refreshToken");
+      if (!refreshToken) throw err; // No refresh possible
+      const refreshRes = await request("/auth/refresh", {
+        method: "POST",
+        body: JSON.stringify({ refreshToken }),
+      });
+      const { accessToken: newAccess, refreshToken: newRefresh } =
+        await refreshRes.json();
+      localStorage.setItem("accessToken", newAccess);
+      localStorage.setItem("refreshToken", newRefresh);
+      return request(path, init); // Retry with new token (header added in buildInit)
     }
     throw err;
   }
@@ -103,5 +119,11 @@ export const AuthAPI = {
     api("/auth/login", { method: "POST", body: JSON.stringify(body) }).then(
       (r) => r.json()
     ),
-  logout: () => api("/auth/logout", { method: "POST" }).then((r) => r.json()),
+  logout: () => {
+    const refreshToken = localStorage.getItem("refreshToken");
+    return api("/auth/logout", {
+      method: "POST",
+      body: refreshToken ? JSON.stringify({ refreshToken }) : undefined,
+    }).then((r) => r.json());
+  },
 };
