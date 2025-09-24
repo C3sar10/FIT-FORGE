@@ -4,19 +4,25 @@ import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 
 export default function ThemeToggle() {
-    const { theme, setTheme } = useTheme();
-    const [mounted, setMounted] = useState(false);
+  const { theme, setTheme, resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
 
-    useEffect(() => setMounted(true), []);
-    
-    if (!mounted) return null;
+  useEffect(() => {
+    setMounted(true);
+    // Force theme sync on mount
+    if (theme === "system") {
+      setTheme(resolvedTheme === "dark" ? "dark" : "light");
+    }
+  }, [theme, resolvedTheme, setTheme]);
 
-    return (
-        <button
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="p-2 rounded bg-gray-200 dark:bg-gray-800"
-        >
-            {theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
-        </button>
-    );
+  if (!mounted) return null;
+
+  return (
+    <button
+      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+      className="p-2 rounded bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-gray-200"
+    >
+      {theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+    </button>
+  );
 }

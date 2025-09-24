@@ -5,19 +5,24 @@
   --secondary-color: rgb(101, 163, 13, 20%);
 }
 
+/* Light mode default */
 body {
   font-family: "Roboto", cursive;
-  background-color: #ffffff; /* Explicit light mode background */
+  background-color: #ffffff !important; /* Explicit light mode with high specificity */
 }
 
+/* Dark mode */
 html.dark body {
-  background-color: #1e1e1e; /* Explicit dark mode background */
+  background-color: #181818 !important; /* Explicit dark mode with high specificity */
 }
 
-/* Force background on mobile browsers */
+/* Force mobile browsers to respect theme toggle over system preference */
 @media (prefers-color-scheme: dark) {
-  body {
-    background-color: #1e1e1e !important; /* Override system dark mode */
+  html:not(.dark) body {
+    background-color: #ffffff !important; /* Ensure light mode when system is dark */
+  }
+  html.dark body {
+    background-color: #181818 !important; /* Reinforce dark mode */
   }
 }
 
