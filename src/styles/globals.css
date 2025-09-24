@@ -1,9 +1,5 @@
 @import "tailwindcss";
 
-/*@import "tailwindcss/preflight";
-@import "tailwindcss/utilities";*/
-
-/* You can add your global styles here */
 :root {
   --primary-color: hsl(85, 85%, 35%);
   --secondary-color: rgb(101, 163, 13, 20%);
@@ -11,6 +7,18 @@
 
 body {
   font-family: "Roboto", cursive;
+  background-color: #ffffff; /* Explicit light mode background */
+}
+
+html.dark body {
+  background-color: #1e1e1e; /* Explicit dark mode background */
+}
+
+/* Force background on mobile browsers */
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: #1e1e1e !important; /* Override system dark mode */
+  }
 }
 
 @layer utilities {
