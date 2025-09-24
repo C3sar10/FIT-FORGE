@@ -611,42 +611,63 @@ const page = () => {
   const router = useRouter();
   const queryClient = useQueryClient(); // Add this to fix error 1
 
-  // Fetch workout with React Query - cached by ID
-  const { data: workoutData, isLoading: workoutLoading } = useQuery({
+  // Fetch workout
+  const {
+    data: workoutData,
+    isLoading: workoutLoading,
+    error: workoutError,
+  } = useQuery<WorkoutApiType, Error>({
     queryKey: ["workout", workoutId],
     queryFn: async () => {
       const res = await api(`/workouts/${workoutId}`);
       return await res.json();
     },
+    enabled: !!workoutId,
   });
 
-  // Fetch exercises in parallel using Promise.all - cache each
+  // Fetch exercises in parallel, cache each
   useEffect(() => {
     if (workoutData) {
+      console.log("Workout data:", workoutData);
       setCurrWorkout(workoutData);
       const fetchExercises = async () => {
-        const flat = (workoutData.blocks ?? []).flatMap((b: any) =>
+        const flatIds = (workoutData.blocks ?? []).flatMap((b: any) =>
           (b.items ?? []).map((i: any) => i.exerciseId)
         );
-        const uniqueIds = [...new Set(flat)]; // Avoid duplicate fetches
+        console.log("Flat list:", flatIds);
+        const uniqueIds = [...new Set(flatIds)]; // Avoid duplicate fetches
+        console.log("Unique IDs:", uniqueIds);
         const exercises = await Promise.all(
           uniqueIds.map(async (id) => {
-            const { data } = await queryClient.fetchQuery({
-              // Use fetchQuery to cache
-              queryKey: ["exercise", id],
-              queryFn: async () => {
-                const res = await api(`/exercises/${id}`);
-                return await res.json();
-              },
-            });
-            return data;
+            try {
+              const data = await queryClient.fetchQuery<ExerciseApiType>({
+                queryKey: ["exercise", id],
+                queryFn: async () => {
+                  const res = await api(`/exercises/${id}`);
+                  if (!res.ok)
+                    throw new Error(`Failed to fetch exercise ${id}`);
+                  return await res.json();
+                },
+              });
+              return data;
+            } catch (err) {
+              console.error(`Error fetching exercise ${id}:`, err);
+              return null; // Handle missing exercises gracefully
+            }
           })
         );
-        // Map back to flat list with details
-        const exerciseMap = new Map(exercises.map((e) => [e.id, e]));
-        const fullList = flat.map((id: any) => ({
+        console.log(
+          "Exercises list in startworkout page, useEffect:",
+          exercises
+        );
+        // Filter out nulls and map to ExerciseType
+        const validExercises = exercises.filter(
+          (e): e is ExerciseApiType => e !== null
+        );
+        const exerciseMap = new Map(validExercises.map((e) => [e.id, e]));
+        const fullList = flatIds.map((id) => ({
           exerciseId: id,
-          name: exerciseMap.get(id)?.title ?? "",
+          name: exerciseMap.get(id)?.title ?? "Unknown Exercise",
           sets: exerciseMap.get(id)?.details.sets ?? 0,
           reps: exerciseMap.get(id)?.details.reps ?? "",
           restSecs: exerciseMap.get(id)?.details.restSecs ?? 0,
@@ -654,9 +675,16 @@ const page = () => {
         }));
         setExerciseList(fullList);
       };
-      fetchExercises();
+      fetchExercises().catch((err) => {
+        console.error("Exercise fetch error:", err);
+        showDialog({
+          title: "Error",
+          message: "Failed to load exercises. Please try again.",
+          actions: [{ id: "ok", label: "OK", variant: "primary" }],
+        });
+      });
     }
-  }, [workoutData]);
+  }, [workoutData, queryClient, showDialog]);
 
   useEffect(() => {
     setMount(true);
