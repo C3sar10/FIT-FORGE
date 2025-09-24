@@ -4,7 +4,7 @@ export const WorkoutBrowseDefault = [
   {
     title: "My Favorites",
     icon: Heart,
-    imgUrl: "/favorites-default.jpg",
+    imgUrl: "/favorites-default.webp",
   },
   {
     title: "New Workout",
@@ -15,7 +15,7 @@ export const WorkoutBrowseDefault = [
   {
     title: "Push/Pull",
     subtitle: "Group",
-    imgUrl: "/push-day-default.jpg",
+    imgUrl: "/push-day-default.webp",
   },
   {
     title: "Recently Done",
@@ -29,16 +29,16 @@ export const WorkoutBrowseDefault = [
   {
     title: "Push/Pull/Legs",
     subtitle: "Group",
-    imgUrl: "/pull-default.jpg",
+    imgUrl: "/pull-default.webp",
   },
   {
     title: "Exercise Library",
-    imgUrl: "/exercise-library-default.jpg",
+    imgUrl: "/exercise-library-default.webp",
     routeUrl: "/dash/workouts/library/exercises",
     action: true,
   },
   {
     title: "My Workout Groups",
-    imgUrl: "/workout-groups-default.jpg",
+    imgUrl: "/workout-groups-default.webp",
   },
 ];
