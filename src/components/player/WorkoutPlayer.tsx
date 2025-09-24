@@ -1,5 +1,5 @@
 "use client";
-import { ExerciseType, WorkoutType } from "@/types/workout";
+import { ExerciseApiType, ExerciseType, WorkoutType } from "@/types/workout";
 import {
   ChevronDown,
   ChevronRightIcon,
@@ -12,6 +12,7 @@ import { useWorkoutGlobal } from "@/context/WorkoutContext";
 import { api } from "@/lib/api";
 import { TimerControls, TimerDisplay } from "./TimerDisplay";
 import { useRouter } from "next/navigation";
+import { useQuery, useQueryClient } from "@tanstack/react-query"; // Add this
 
 interface ExerciseLiProps {
   exerciseObj: ExerciseType;
@@ -74,6 +75,51 @@ const WorkoutPlayer = (props: Props) => {
   const [isAnimating, setIsAnimating] = useState(false);
   const [workoutData, setWorkoutData] = useState<WorkoutType | null>(null);
   const [playerOpen, setPlayerOpen] = useState(false);
+  const queryClient = useQueryClient(); // To access cache
+
+  // Fetch workout from cache (or API if not cached)
+  const { data: workout } = useQuery({
+    queryKey: ["workout", currWorkoutId],
+    queryFn: async () => {
+      if (!currWorkoutId) throw new Error("No workout ID");
+      const res = await api(`/workouts/${currWorkoutId}`);
+      return await res.json();
+    },
+    enabled: !!currWorkoutId, // Only fetch if ID exists
+  });
+
+  // Get exercises from cache (warmed by preview)
+  const [exerciseList, setExerciseList] = useState<ExerciseType[]>([]);
+  useEffect(() => {
+    if (workout && currWorkoutId) {
+      const flatIds = (workout.blocks ?? []).flatMap((b: any) =>
+        (b.items ?? []).map((i: any) => i.exerciseId)
+      );
+      const uniqueIds = [...new Set(flatIds)];
+      const cachedExercises = uniqueIds
+        .map((id) =>
+          queryClient.getQueryData<ExerciseApiType>(["exercise", id])
+        )
+        .filter(Boolean); // Get from cache
+      if (cachedExercises.length === uniqueIds.length) {
+        // All cached - map to list
+        const exerciseMap = new Map(cachedExercises.map((e) => [e?.id, e]));
+        const fullList = flatIds.map((id: string) => ({
+          exerciseId: id,
+          name: exerciseMap.get(id)?.title ?? "",
+          sets: exerciseMap.get(id)?.details.sets ?? 0,
+          reps: exerciseMap.get(id)?.details.reps ?? "",
+          restSecs: exerciseMap.get(id)?.details.restSecs ?? 0,
+          image: exerciseMap.get(id)?.image ?? "",
+        }));
+        setExerciseList(fullList);
+      } else {
+        // Fallback fetch if not fully cached (rare after preview)
+        // ... (implement similar to preview if needed)
+      }
+      setWorkoutData(workout); // Set once fetched/cached
+    }
+  }, [workout, currWorkoutId, queryClient]);
 
   const handleAnimatedEnd = () => {
     if (!isWorkoutPlayerOpen) {
@@ -90,37 +136,6 @@ const WorkoutPlayer = (props: Props) => {
       setIsVisible(false);
     }, 500); // 300ms animation duration
   };
-
-  const [exerciseList, setExerciseList] = useState<ExerciseType[]>([
-    {
-      exerciseId: "1",
-      name: "Exer Name",
-      sets: 3,
-      reps: "6-8",
-      restSecs: 180,
-    },
-    {
-      exerciseId: "2",
-      name: "Exer Name",
-      sets: 3,
-      reps: "6-8",
-      restSecs: 180,
-    },
-    {
-      exerciseId: "3",
-      name: "Exer Name",
-      sets: 3,
-      reps: "6-8",
-      restSecs: 180,
-    },
-    {
-      exerciseId: "4",
-      name: "Exer Name",
-      sets: 3,
-      reps: "6-8",
-      restSecs: 180,
-    },
-  ]);
 
   useEffect(() => {
     if (currWorkoutId) {
@@ -141,8 +156,13 @@ const WorkoutPlayer = (props: Props) => {
     const data = await res.json();
     console.log("Workout data: ", data);
     setWorkoutData(data);
-    const exerciseList = [...data.blocks[0].items, ...data.blocks[1].items];
-    setExerciseList(exerciseList);
+    if (data.blocks[1]) {
+      const exerciseList = [...data.blocks[0].items, ...data.blocks[1].items];
+      setExerciseList(exerciseList);
+    } else {
+      const exerciseList = [...data.blocks[0].items];
+      setExerciseList(exerciseList);
+    }
   };
 
   return (

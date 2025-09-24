@@ -1,12 +1,18 @@
 "use client";
 import PageContainer from "@/components/ui/PageContainer";
 import ExerciseLi from "@/components/workouts/ExerciseLi";
+import SkeletonExerciseLi from "@/components/workouts/SkeletonExerciseLi";
 import { useAuth } from "@/context/AuthContext";
 import { useDialog } from "@/context/DialogContext";
 import { useTimer } from "@/context/TimerContext";
 import { useWorkoutGlobal } from "@/context/WorkoutContext";
 import { api, http } from "@/lib/api";
-import { ExerciseType, WorkoutApiType, WorkoutType } from "@/types/workout";
+import {
+  ExerciseApiType,
+  ExerciseType,
+  WorkoutApiType,
+  WorkoutType,
+} from "@/types/workout";
 import {
   ArrowLeft,
   Check,
@@ -21,6 +27,7 @@ import {
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query"; // Add this
 
 /* ---------------- Small modal ---------------- */
 function Modal({
@@ -338,9 +345,17 @@ const StartWorkoutBody = ({
           <div className="w-full flex flex-col gap-2">
             <h2 className="text-sm md:text-base font-medium">Exercise List</h2>
             <ul className="w-full flex flex-col gap-2">
-              {exerciseList.map((exercise) => (
-                <ExerciseLi exerciseObj={exercise} key={exercise.exerciseId} />
-              ))}
+              {exerciseList.length > 0 &&
+                exerciseList.map((exercise) => (
+                  <ExerciseLi
+                    exerciseObj={exercise}
+                    key={exercise.exerciseId}
+                  />
+                ))}
+              {exerciseList.length <= 0 &&
+                Array(5)
+                  .fill(0)
+                  .map((_, index) => <SkeletonExerciseLi key={index} />)}
             </ul>
           </div>
 
@@ -586,41 +601,78 @@ const StartWorkoutBody = ({
 
 /* ---------------- Page wrapper ---------------- */
 const page = () => {
-  const params = useParams();
-  const workoutId = (params?.workoutId as string) || "";
-
-  const [currWorkout, setCurrWorkout] = useState<
-    (WorkoutApiType & { id: string }) | null
-  >(null);
+  const { workoutId } = useParams() as { workoutId: string };
+  const [currWorkout, setCurrWorkout] = useState<WorkoutApiType | null>(null);
   const [exerciseList, setExerciseList] = useState<ExerciseType[]>([]);
   const [mount, setMount] = useState(false);
 
   const { user } = useAuth();
   const { showDialog } = useDialog();
   const router = useRouter();
+  const queryClient = useQueryClient(); // Add this to fix error 1
 
-  const fetchCurrWorkout = async () => {
-    const res = await api(`/workouts/${workoutId}`);
-    const workoutData = await res.json();
-    setCurrWorkout(workoutData);
+  // Fetch workout with React Query - cached by ID
+  const { data: workoutData, isLoading: workoutLoading } = useQuery({
+    queryKey: ["workout", workoutId],
+    queryFn: async () => {
+      const res = await api(`/workouts/${workoutId}`);
+      return await res.json();
+    },
+  });
 
-    // Safe flatten of all blocks
-    const flat: ExerciseType[] = (workoutData.blocks ?? []).flatMap((b: any) =>
-      (b.items ?? []).map((i: any) => i)
-    );
-    setExerciseList(flat);
-  };
+  // Fetch exercises in parallel using Promise.all - cache each
+  useEffect(() => {
+    if (workoutData) {
+      setCurrWorkout(workoutData);
+      const fetchExercises = async () => {
+        const flat = (workoutData.blocks ?? []).flatMap((b: any) =>
+          (b.items ?? []).map((i: any) => i.exerciseId)
+        );
+        const uniqueIds = [...new Set(flat)]; // Avoid duplicate fetches
+        const exercises = await Promise.all(
+          uniqueIds.map(async (id) => {
+            const { data } = await queryClient.fetchQuery({
+              // Use fetchQuery to cache
+              queryKey: ["exercise", id],
+              queryFn: async () => {
+                const res = await api(`/exercises/${id}`);
+                return await res.json();
+              },
+            });
+            return data;
+          })
+        );
+        // Map back to flat list with details
+        const exerciseMap = new Map(exercises.map((e) => [e.id, e]));
+        const fullList = flat.map((id: any) => ({
+          exerciseId: id,
+          name: exerciseMap.get(id)?.title ?? "",
+          sets: exerciseMap.get(id)?.details.sets ?? 0,
+          reps: exerciseMap.get(id)?.details.reps ?? "",
+          restSecs: exerciseMap.get(id)?.details.restSecs ?? 0,
+          image: exerciseMap.get(id)?.image ?? "",
+        }));
+        setExerciseList(fullList);
+      };
+      fetchExercises();
+    }
+  }, [workoutData]);
 
   useEffect(() => {
     setMount(true);
-    if (workoutId) fetchCurrWorkout();
-  }, [workoutId]);
+  }, []);
 
-  if (!mount) return null;
-  if (!currWorkout) {
+  if (!mount || workoutLoading)
     return (
       <PageContainer>
         <main className="p-6">Loading…</main>
+      </PageContainer>
+    );
+
+  if (!currWorkout) {
+    return (
+      <PageContainer>
+        <main className="p-6">Workout not found</main>
       </PageContainer>
     );
   }

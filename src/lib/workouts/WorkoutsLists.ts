@@ -13,11 +13,6 @@ export const WorkoutBrowseDefault = [
     routeUrl: "/build/workout/custom",
   },
   {
-    title: "Push/Pull",
-    subtitle: "Group",
-    imgUrl: "/push-day-default.webp",
-  },
-  {
     title: "Recently Done",
     icon: Redo2,
   },
@@ -25,11 +20,7 @@ export const WorkoutBrowseDefault = [
     title: "Workout Library",
     routeUrl: "/dash/workouts/library/exercises",
     action: true,
-  },
-  {
-    title: "Push/Pull/Legs",
-    subtitle: "Group",
-    imgUrl: "/pull-default.webp",
+    imgUrl: "/workout-library-default.webp",
   },
   {
     title: "Exercise Library",
