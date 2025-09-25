@@ -12,21 +12,29 @@ import {
   Pause,
 } from "lucide-react";
 import React, { useEffect, useState } from "react";
+import { useLogGlobal } from "@/context/LogContext";
+import { AuthAPI } from "@/lib/api";
 import ExerciseLi from "../workouts/ExerciseLi";
 import { useWorkoutGlobal } from "@/context/WorkoutContext";
 import { api } from "@/lib/api";
 import { TimerControls, TimerDisplay } from "./TimerDisplay";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query"; // Add this
+import { WorkoutLogType } from "@/types/progress";
 
 interface ExerciseLiProps {
   exerciseObj: ExerciseType;
+  setCurrentWorkoutLog?: (arg0: WorkoutLogType | null) => void;
+  currentWorkoutLog?: WorkoutLogType | null;
 }
 
-const LiveExerciseLi: React.FC<ExerciseLiProps> = ({ exerciseObj }) => {
-  const [checked, setChecked] = useState(false);
-
+const LiveExerciseLi: React.FC<ExerciseLiProps> = ({
+  exerciseObj,
+  setCurrentWorkoutLog,
+  currentWorkoutLog,
+}) => {
   const router = useRouter();
+  const [isChecked, setIsChecked] = useState(false);
 
   if (!exerciseObj)
     return (
@@ -35,12 +43,41 @@ const LiveExerciseLi: React.FC<ExerciseLiProps> = ({ exerciseObj }) => {
       </li>
     );
 
+  const handleCheck = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const newCheckedState = event.target.checked;
+    setIsChecked(newCheckedState);
+    if (!setCurrentWorkoutLog || !currentWorkoutLog) return;
+    if (setCurrentWorkoutLog && newCheckedState && currentWorkoutLog != null) {
+      setCurrentWorkoutLog({
+        ...currentWorkoutLog,
+        workoutDetails: {
+          ...currentWorkoutLog.workoutDetails,
+          exercisesCompleted: [
+            ...currentWorkoutLog.workoutDetails.exercisesCompleted,
+            exerciseObj.exerciseId,
+          ],
+        },
+      });
+    } else {
+      setCurrentWorkoutLog({
+        ...currentWorkoutLog,
+        workoutDetails: {
+          ...currentWorkoutLog.workoutDetails,
+          exercisesCompleted:
+            currentWorkoutLog.workoutDetails.exercisesCompleted.filter(
+              (id) => id !== exerciseObj.exerciseId
+            ),
+        },
+      });
+    }
+  };
+
   return (
     <li className="w-full p-2 rounded-md border border-neutral-200 bg-black/50 hover:bg-black/90 cursor-pointer flex items-center justify-between">
       <div className="flex items-center">
         <input
-          checked={checked}
-          onChange={() => setChecked(!checked)}
+          checked={isChecked}
+          onChange={handleCheck}
           type="checkbox"
           className="size-6 mr-4 bg-transparent border-white"
         />
@@ -52,14 +89,14 @@ const LiveExerciseLi: React.FC<ExerciseLiProps> = ({ exerciseObj }) => {
         >
           <h2
             className={`${
-              checked && "line-through text-neutral-400"
+              isChecked ? "line-through text-neutral-400" : ""
             } text-base font-medium`}
           >
             {exerciseObj.name}
           </h2>
           <div
             className={`${
-              checked && "line-through text-neutral-500"
+              isChecked ? "line-through text-neutral-500" : ""
             } flex items-center gap-1 text-sm`}
           >
             <p>Sets {exerciseObj.sets.toLocaleString()}</p>
@@ -81,8 +118,14 @@ const LiveExerciseLi: React.FC<ExerciseLiProps> = ({ exerciseObj }) => {
 type Props = {};
 
 const WorkoutPlayer = (props: Props) => {
-  const { isWorkoutPlayerOpen, toggleWorkoutPlayer, currWorkoutId } =
-    useWorkoutGlobal();
+  const {
+    isWorkoutPlayerOpen,
+    toggleWorkoutPlayer,
+    currWorkoutId,
+    playerState,
+  } = useWorkoutGlobal();
+  const { setCurrentWorkoutLog, setIsPostWorkoutLog, currentWorkoutLog } =
+    useLogGlobal();
   const [isVisible, setIsVisible] = useState(true);
   const [isAnimating, setIsAnimating] = useState(false);
   const [workoutData, setWorkoutData] = useState<WorkoutApiType | null>(null);
@@ -204,12 +247,59 @@ const WorkoutPlayer = (props: Props) => {
   };
 
   useEffect(() => {
-    console.log("workout player open: ", isWorkoutPlayerOpen);
-    if (isWorkoutPlayerOpen) {
+    if (
+      isWorkoutPlayerOpen &&
+      playerState !== "inactive" &&
+      !currentWorkoutLog &&
+      workoutData &&
+      currWorkoutId
+    ) {
+      setIsPostWorkoutLog(true);
+      let user = null;
+      (async () => {
+        try {
+          user = await AuthAPI.me();
+        } catch {}
+        if (user) {
+          const now = new Date();
+          const logObj = {
+            logId: "",
+            userId: user?.id ?? "",
+            userName: user?.name ?? "",
+            title: workoutData.name ?? "Workout Log",
+            createdOn: now.toISOString(),
+            lastUpdated: now.toISOString(),
+            description: `Workout completed on ${now.toLocaleDateString()} at ${now.toLocaleTimeString()}`,
+            workoutDetails: {
+              workoutTimestamp: now.toISOString(),
+              workoutTitle: workoutData.name ?? "",
+              workoutId: currWorkoutId,
+              duration: 0,
+              exerciseList:
+                workoutData.blocks?.flatMap((b: any) => b.items ?? []) ?? [],
+              exercisesCompleted: [],
+              type:
+                typeof workoutData.type === "string" ? workoutData.type : "",
+            },
+            rating: undefined,
+            intensity: undefined,
+            notes: "",
+          };
+          setCurrentWorkoutLog(logObj);
+        }
+      })();
+    }
+    if (isWorkoutPlayerOpen && playerState !== "inactive") {
       setIsVisible(true);
       setPlayerOpen(true);
     }
-  }, [isWorkoutPlayerOpen]);
+  }, [isWorkoutPlayerOpen, workoutData, currWorkoutId, playerState]);
+
+  useEffect(() => {
+    if (!isWorkoutPlayerOpen && playerState === "inactive") {
+      handleAnimatedEnd();
+    }
+  }, [playerState, isWorkoutPlayerOpen]);
 
   return (
     <div
@@ -274,6 +364,8 @@ const WorkoutPlayer = (props: Props) => {
                 <LiveExerciseLi
                   exerciseObj={exercise}
                   key={exercise.exerciseId}
+                  currentWorkoutLog={currentWorkoutLog}
+                  setCurrentWorkoutLog={setCurrentWorkoutLog}
                 />
               ))}
             </ul>

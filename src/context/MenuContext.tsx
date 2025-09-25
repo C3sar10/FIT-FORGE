@@ -3,6 +3,7 @@ import { createContext, useContext, useState, ReactNode } from "react";
 interface MenuContextType {
   isMenuOpen: boolean;
   toggleMenu: () => void;
+  setIsMenuOpen: (val: boolean) => void;
 }
 
 const MenuContext = createContext<MenuContextType | undefined>(undefined);
@@ -15,7 +16,7 @@ export function MenuProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <MenuContext.Provider value={{ isMenuOpen, toggleMenu }}>
+    <MenuContext.Provider value={{ isMenuOpen, toggleMenu, setIsMenuOpen }}>
       {children}
     </MenuContext.Provider>
   );

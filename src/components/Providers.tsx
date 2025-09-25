@@ -9,6 +9,7 @@ import { TimerProvider } from "@/context/TimerContext";
 import { DialogProvider } from "@/context/DialogContext";
 import TimerUiBridge from "@/components/player/TimerUiBridge";
 import React from "react";
+import { LogProvider } from "@/context/LogContext";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -35,12 +36,14 @@ export default function Providers({ children }: ProvidersProps) {
           disableTransitionOnChange // Prevent theme flash
         >
           <TimerProvider>
-            <WorkoutProvider>
-              <DialogProvider>
-                <TimerUiBridge />
-                {children}
-              </DialogProvider>
-            </WorkoutProvider>
+            <LogProvider>
+              <WorkoutProvider>
+                <DialogProvider>
+                  <TimerUiBridge />
+                  {children}
+                </DialogProvider>
+              </WorkoutProvider>
+            </LogProvider>
           </TimerProvider>
         </ThemeProvider>
       </AuthProvider>

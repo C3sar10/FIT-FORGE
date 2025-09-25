@@ -10,6 +10,7 @@ import { ApiError } from "./utils/ApiError";
 
 import exerciseRouter from "./routes/exercises";
 import workoutRouter from "./routes/workouts";
+import workoutLogRouter from "./routes/workoutLogs"; // Add this
 
 const app = express();
 
@@ -44,6 +45,7 @@ app.get("/whoami", requireAuth, (req, res) => {
 
 app.use("/exercises", exerciseRouter);
 app.use("/workouts", workoutRouter);
+app.use("/workoutLogs", workoutLogRouter); // Add this
 
 // error handler
 app.use(

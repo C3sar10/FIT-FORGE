@@ -1,4 +1,5 @@
 // src/lib/api.ts
+import { WorkoutLogType } from "@/types/progress";
 import { ExerciseApiType } from "@/types/workout";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL!;
@@ -126,4 +127,30 @@ export const AuthAPI = {
       body: refreshToken ? JSON.stringify({ refreshToken }) : undefined,
     }).then((r) => r.json());
   },
+};
+
+export const LogAPI = {
+  getLogs: (
+    limit = 20,
+    cursor?: string,
+    fromDate?: string,
+    toDate?: string
+  ) => {
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (cursor) params.append("cursor", cursor);
+    if (fromDate) params.append("fromDate", fromDate);
+    if (toDate) params.append("toDate", toDate);
+    return api(`/workoutLogs?${params.toString()}`).then((r) => r.json());
+  },
+  getLog: (id: string) => api(`/workoutLogs/${id}`).then((r) => r.json()),
+  createLog: (body: WorkoutLogType) =>
+    api("/workoutLogs", { method: "POST", body: JSON.stringify(body) }).then(
+      (r) => r.json()
+    ),
+  updateLog: (id: string, body: Partial<WorkoutLogType>) =>
+    api(`/workoutLogs/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }).then((r) => r.json()),
+  deleteLog: (id: string) => api(`/workoutLogs/${id}`, { method: "DELETE" }),
 };

@@ -4,6 +4,7 @@ import { Metadata } from "next";
 import { roboto } from "@/lib/fonts";
 import "@/lib/amplify";
 import Providers from "@/components/Providers";
+import WorkoutLogModal from "@/components/logs/WorkoutLogModal";
 
 export const metadata: Metadata = {
   title: "FitForge",
