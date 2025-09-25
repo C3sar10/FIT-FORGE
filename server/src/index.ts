@@ -1,5 +1,5 @@
 import express from "express";
-import cors from "cors";
+import cors, { CorsOptions } from "cors";
 import cookieParser from "cookie-parser";
 import morgan from "morgan";
 import mongoose from "mongoose";
@@ -15,21 +15,17 @@ const app = express();
 
 const allowedOrigins = [
   "http://localhost:3000",
-  "https://fit-forge-brown.vercel.app/",
-  ,
+  "https://fit-forge-drab.vercel.app",
 ];
 
-app.use(
-  cors({
-    origin(origin, cb) {
-      if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
-      return cb(new Error("Not allowed by CORS"));
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
+const corsOptions = {
+  origin: allowedOrigins,
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
+// Preflight for all routes (regex instead of "*")
+app.options(/.*/, cors(corsOptions));
 
 app.use(morgan("dev"));
 app.use(express.json());

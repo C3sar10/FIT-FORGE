@@ -23,7 +23,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     (async () => {
       try {
-        const data = await AuthAPI.me(); // { user: {...} | null }
+        const data = await AuthAPI.me(); // { user: {...} | null } – uses Authorization if token exists
         setUser(data?.user ?? null);
       } finally {
         setLoading(false);
@@ -32,17 +32,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string) => {
-    const data = await AuthAPI.login({ email, password }); // sets cookies
+    const data = await AuthAPI.login({ email, password }); // { user, accessToken, refreshToken }
+    localStorage.setItem("accessToken", data.accessToken);
+    localStorage.setItem("refreshToken", data.refreshToken);
     setUser(data.user); // update snapshot immediately
   };
 
   const register = async (name: string, email: string, password: string) => {
-    const data = await AuthAPI.register({ name, email, password }); // sets cookies
+    const data = await AuthAPI.register({ name, email, password }); // { user, accessToken, refreshToken }
+    localStorage.setItem("accessToken", data.accessToken);
+    localStorage.setItem("refreshToken", data.refreshToken);
     setUser(data.user); // snapshot
   };
 
   const logout = async () => {
-    await AuthAPI.logout();
+    await AuthAPI.logout(); // Sends refreshToken in body
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
     setUser(null);
   };
 

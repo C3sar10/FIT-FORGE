@@ -1,15 +1,29 @@
 @import "tailwindcss";
 
-/*@import "tailwindcss/preflight";
-@import "tailwindcss/utilities";*/
-
 :root {
     --primary-button: hsl(85, 85%, 35%); 
     --secondary-color: rgb(101, 163, 13, 20%);
 }
 
+/* Light mode default */
 body {
   font-family: "Roboto", cursive;
+  background-color: #ffffff !important; /* Explicit light mode with high specificity */
+}
+
+/* Dark mode */
+html.dark body {
+  background-color: #181818 !important; /* Explicit dark mode with high specificity */
+}
+
+/* Force mobile browsers to respect theme toggle over system preference */
+@media (prefers-color-scheme: dark) {
+  html:not(.dark) body {
+    background-color: #ffffff !important; /* Ensure light mode when system is dark */
+  }
+  html.dark body {
+    background-color: #181818 !important; /* Reinforce dark mode */
+  }
 }
 
 @layer utilities {

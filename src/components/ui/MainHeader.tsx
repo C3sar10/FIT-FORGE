@@ -52,7 +52,7 @@ const UserMenu: React.FC<UserMenuProps> = ({ isOpen, toggleMenu }) => {
       } w-fit min-w-[275px] max-w-[375px] min-h-[200px] absolute z-50 top-12 right-0 border rounded-lg p-3 flex-col
         ${
           isDark
-            ? "bg-[#1e1e1e] border-neutral-100 text-white"
+            ? "bg-[#181818] border-neutral-100 text-white"
             : "bg-white border-neutral-100 text-black"
         }
 

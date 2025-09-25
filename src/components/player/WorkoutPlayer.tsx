@@ -1,5 +1,10 @@
 "use client";
-import { ExerciseType, WorkoutType } from "@/types/workout";
+import {
+  ExerciseApiType,
+  ExerciseType,
+  WorkoutApiType,
+  WorkoutType,
+} from "@/types/workout";
 import {
   ChevronDown,
   ChevronRightIcon,
@@ -12,6 +17,7 @@ import { useWorkoutGlobal } from "@/context/WorkoutContext";
 import { api } from "@/lib/api";
 import { TimerControls, TimerDisplay } from "./TimerDisplay";
 import { useRouter } from "next/navigation";
+import { useQuery, useQueryClient } from "@tanstack/react-query"; // Add this
 
 interface ExerciseLiProps {
   exerciseObj: ExerciseType;
@@ -21,6 +27,13 @@ const LiveExerciseLi: React.FC<ExerciseLiProps> = ({ exerciseObj }) => {
   const [checked, setChecked] = useState(false);
 
   const router = useRouter();
+
+  if (!exerciseObj)
+    return (
+      <li className="w-full p-2 rounded-md bg-neutral-800 text-neutral-500">
+        Loading exercise...
+      </li>
+    );
 
   return (
     <li className="w-full p-2 rounded-md border border-neutral-200 bg-black/50 hover:bg-black/90 cursor-pointer flex items-center justify-between">
@@ -72,8 +85,107 @@ const WorkoutPlayer = (props: Props) => {
     useWorkoutGlobal();
   const [isVisible, setIsVisible] = useState(true);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [workoutData, setWorkoutData] = useState<WorkoutType | null>(null);
+  const [workoutData, setWorkoutData] = useState<WorkoutApiType | null>(null);
   const [playerOpen, setPlayerOpen] = useState(false);
+  const queryClient = useQueryClient(); // To access cache
+  const [exerciseList, setExerciseList] = useState<ExerciseType[]>([]);
+  const [isLoadingExercises, setIsLoadingExercises] = useState(false); // Add for loading state
+  const router = useRouter();
+
+  // Fetch workout from cache or API
+  const {
+    data: workout,
+    isLoading: workoutLoading,
+    error,
+  } = useQuery<WorkoutApiType, Error>({
+    queryKey: ["workout", currWorkoutId],
+    queryFn: async () => {
+      if (!currWorkoutId) throw new Error("No workout ID");
+      const res = await api(`/workouts/${currWorkoutId}`);
+      return await res.json();
+    },
+    enabled: !!currWorkoutId, // Prevent fetch until ID is set
+  });
+
+  // Get exercises from cache or fallback fetch
+  useEffect(() => {
+    if (workout && currWorkoutId) {
+      setWorkoutData(workout);
+      setIsLoadingExercises(true);
+      const flatIds = (workout.blocks ?? []).flatMap((b: any) =>
+        (b.items ?? []).map((i: any) => i.exerciseId)
+      );
+      const uniqueIds = [...new Set(flatIds)];
+      const cachedExercises = uniqueIds
+        .map((id) =>
+          queryClient.getQueryData<ExerciseApiType>(["exercise", id])
+        )
+        .filter((e): e is ExerciseApiType => !!e); // Type guard
+      if (cachedExercises.length === uniqueIds.length) {
+        // All cached - map to list
+        const exerciseMap = new Map(cachedExercises.map((e) => [e.id, e]));
+        const fullList = flatIds.map((id) => ({
+          exerciseId: id,
+          name: exerciseMap.get(id)?.title ?? "",
+          sets: exerciseMap.get(id)?.details.sets ?? 0,
+          reps: exerciseMap.get(id)?.details.reps ?? "",
+          restSecs: exerciseMap.get(id)?.details.restSecs ?? 0,
+          image: exerciseMap.get(id)?.image ?? "",
+        }));
+        setExerciseList(fullList);
+        setIsLoadingExercises(false);
+      } else {
+        // Fallback fetch missing exercises
+        const fetchMissing = async () => {
+          try {
+            const missingIds = uniqueIds.filter(
+              (id) => !queryClient.getQueryData(["exercise", id])
+            );
+            const newExercises = await Promise.all(
+              missingIds.map(async (id) => {
+                try {
+                  const data = await queryClient.fetchQuery<ExerciseApiType>({
+                    queryKey: ["exercise", id],
+                    queryFn: async () => {
+                      const res = await api(`/exercises/${id}`);
+                      if (!res.ok)
+                        throw new Error(`Failed to fetch exercise ${id}`);
+                      return await res.json();
+                    },
+                  });
+                  return data;
+                } catch (err) {
+                  console.error(`Error fetching exercise ${id}:`, err);
+                  return null; // Handle missing exercises
+                }
+              })
+            );
+            // Combine cached and new exercises
+            const allExercises = [
+              ...cachedExercises,
+              ...newExercises.filter((e): e is ExerciseApiType => e !== null),
+            ];
+            const exerciseMap = new Map(allExercises.map((e) => [e.id, e]));
+            const fullList = flatIds.map((id) => ({
+              exerciseId: id,
+              name: exerciseMap.get(id)?.title ?? "Unknown Exercise",
+              sets: exerciseMap.get(id)?.details.sets ?? 0,
+              reps: exerciseMap.get(id)?.details.reps ?? "N/A",
+              restSecs: exerciseMap.get(id)?.details.restSecs ?? 0,
+              image: exerciseMap.get(id)?.image ?? "",
+            }));
+            setExerciseList(fullList);
+          } catch (err) {
+            console.error("Fallback fetch error:", err);
+            setExerciseList([]); // Fallback to empty list
+          } finally {
+            setIsLoadingExercises(false);
+          }
+        };
+        fetchMissing();
+      }
+    }
+  }, [workout, currWorkoutId, queryClient]);
 
   const handleAnimatedEnd = () => {
     if (!isWorkoutPlayerOpen) {
@@ -91,43 +203,6 @@ const WorkoutPlayer = (props: Props) => {
     }, 500); // 300ms animation duration
   };
 
-  const [exerciseList, setExerciseList] = useState<ExerciseType[]>([
-    {
-      exerciseId: "1",
-      name: "Exer Name",
-      sets: 3,
-      reps: "6-8",
-      restSecs: 180,
-    },
-    {
-      exerciseId: "2",
-      name: "Exer Name",
-      sets: 3,
-      reps: "6-8",
-      restSecs: 180,
-    },
-    {
-      exerciseId: "3",
-      name: "Exer Name",
-      sets: 3,
-      reps: "6-8",
-      restSecs: 180,
-    },
-    {
-      exerciseId: "4",
-      name: "Exer Name",
-      sets: 3,
-      reps: "6-8",
-      restSecs: 180,
-    },
-  ]);
-
-  useEffect(() => {
-    if (currWorkoutId) {
-      fetchWorkoutDetails(currWorkoutId);
-    }
-  }, [currWorkoutId]);
-
   useEffect(() => {
     console.log("workout player open: ", isWorkoutPlayerOpen);
     if (isWorkoutPlayerOpen) {
@@ -135,15 +210,6 @@ const WorkoutPlayer = (props: Props) => {
       setPlayerOpen(true);
     }
   }, [isWorkoutPlayerOpen]);
-
-  const fetchWorkoutDetails = async (id: string) => {
-    const res = await api(`/workouts/${id}`); // uses your existing route
-    const data = await res.json();
-    console.log("Workout data: ", data);
-    setWorkoutData(data);
-    const exerciseList = [...data.blocks[0].items, ...data.blocks[1].items];
-    setExerciseList(exerciseList);
-  };
 
   return (
     <div

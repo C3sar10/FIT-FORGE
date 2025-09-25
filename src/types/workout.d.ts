@@ -5,6 +5,7 @@ export interface ExerciseType {
   reps: string;
   restSecs: number;
   image?: string;
+  tags?: string[];
 }
 
 export interface WorkoutType {

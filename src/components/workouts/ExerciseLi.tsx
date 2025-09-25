@@ -25,7 +25,7 @@ const ExerciseLi: React.FC<ExerciseLiProps> = ({ exerciseObj }) => {
         <div className="flex flex-col items-start">
           <h2 className="text-base font-medium">{exerciseObj.name}</h2>
           <div className="flex items-center gap-1 text-sm">
-            <p>Sets {exerciseObj.sets.toLocaleString()}</p>
+            <p>Sets {exerciseObj.sets && exerciseObj.sets.toLocaleString()}</p>
             <p>|</p>
             <p>Reps {exerciseObj.reps}</p>
           </div>
