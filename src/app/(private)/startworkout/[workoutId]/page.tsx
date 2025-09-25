@@ -105,7 +105,7 @@ const StartWorkoutHeader: React.FC<HeaderProps> = ({
               Created by {author}
             </p>
             <div className="w-full max-w-[500px] flex flex-wrap gap-1">
-              {tags.slice(0, 3).map((tag, i) => (
+              {tags.slice(0, 5).map((tag, i) => (
                 <span
                   key={i}
                   className="capitalize text-xs sm:text-sm font-medium text-white px-2 py-1 bg-[#1e1e1e] rounded-md border border-neutral-200"
@@ -180,25 +180,62 @@ const StartWorkoutBody = ({
   const [tagsInput, setTagsInput] = useState(toStringList(workout.tags));
 
   // Selected exercises (simple single block "Main")
+  /*
   const initialSelected: ExerciseCard[] = useMemo(() => {
-    const flat = (workout.blocks ?? []).flatMap((b: any) => b.items ?? []);
-    // de-dupe by id keeping order
     const seen = new Set<string>();
     const out: ExerciseCard[] = [];
-    flat.forEach((i: any) => {
-      const id = String(i.exerciseId);
+    exerciseList.forEach((i: ExerciseType | ExerciseApiType) => {
+      let id;
+      let newCard: ExerciseCard = {
+        id: "",
+        title: "",
+        tags: [],
+        image: "",
+      };
+      if ("exerciseId" in i) {
+        id = String(i.exerciseId);
+        newCard = { ...newCard, id: id, title: i.name, image: i.image ?? null };
+      } else {
+        id = String(i.id);
+        newCard = {
+          id: id,
+          title: i.title,
+          image: i.image ?? null,
+          tags: i.tags,
+        };
+      }
+
       if (!seen.has(id)) {
         seen.add(id);
+        out.push(newCard);
+      }
+    });
+    return out;
+  }, [exerciseList, workout.blocks]);*/
+  // Selected exercises (simple single block "Main")
+  const initialSelected: ExerciseCard[] = useMemo(() => {
+    const seen = new Set<string>();
+    const out: ExerciseCard[] = [];
+    // Use workout.blocks directly for immediate computation (synchronous)
+    const flatItems = (workout.blocks ?? []).flatMap((b: any) => b.items ?? []);
+    flatItems.forEach((i: { exerciseId: string }) => {
+      const id = i.exerciseId;
+      if (!seen.has(id)) {
+        seen.add(id);
+        // Fallback to exerciseList for title/image if available
+        const matchingExercise = exerciseList.find((e) => e.exerciseId === id);
         out.push({
           id,
-          title: (i as any).title || "",
-          tags: [],
-          image: undefined,
+          title: matchingExercise?.name ?? "Unknown Exercise",
+          tags: matchingExercise?.tags ?? [],
+          image: matchingExercise?.image ?? null,
         });
       }
     });
     return out;
-  }, [workout.blocks]);
+  }, [workout.blocks, exerciseList]);
+
+  //console.log("initial selected exercises: ", initialSelected);
 
   const [selected, setSelected] = useState<ExerciseCard[]>(initialSelected);
 
@@ -218,7 +255,7 @@ const StartWorkoutBody = ({
     setSelected(initialSelected);
     setIsEditing(false);
     setDropDown(false);
-  }, [workout.id]); // eslint-disable-line
+  }, [workout.id, initialSelected]);
 
   const filtered = useMemo(() => {
     const qq = q.trim().toLowerCase();
@@ -246,6 +283,8 @@ const StartWorkoutBody = ({
       );
       cursor = page.nextCursor;
     } while (items.length < 100 && cursor);
+
+    console.log("Items in load library: ", items);
 
     setLibrary(items);
     setLibLoaded(true);
@@ -719,6 +758,8 @@ const page = () => {
       (b.items ?? []).map((i: any) => i)
     );
     setExerciseList(flat);
+    // Update cache
+    queryClient.setQueryData(["workout", workoutId], next);
   };
 
   const handleDeleted = async () => {
