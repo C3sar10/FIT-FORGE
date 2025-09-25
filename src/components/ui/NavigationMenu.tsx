@@ -5,6 +5,9 @@ import { FooterMenuList } from "@/types/nav";
 import { FooterPlusNavMenuMain } from "@/lib/nav/FooterNavList";
 import { ChevronRight } from "lucide-react";
 import { useMenu } from "@/context/MenuContext";
+import { useLogGlobal } from "@/context/LogContext";
+import { set } from "mongoose";
+import { useRouter } from "next/navigation";
 
 type Props = {};
 
@@ -14,19 +17,45 @@ interface subMenu {
 }
 
 const SubMenu: React.FC<subMenu> = ({ menuName, menuList }) => {
+  const { setIsPostWorkoutLog, setLogOpen } = useLogGlobal();
+  const { isMenuOpen, setIsMenuOpen } = useMenu();
+  const router = useRouter();
+
+  const handleAction = (menuItemId: string) => {
+    if (menuItemId === "startWorkout") {
+      console.log("Start a workout action triggered");
+    }
+    if (menuItemId === "logWorkout") {
+      setIsPostWorkoutLog(false);
+      setLogOpen(true);
+      setIsMenuOpen(false);
+      console.log("Log a workout action triggered");
+    }
+    if (menuItemId === "createWorkout") {
+      router.push("/build/workout/custom");
+      console.log("Create New Workout action triggered");
+    }
+    if (menuItemId === "createPlan") {
+      console.log("Create New Plan action triggered");
+    }
+  };
+
   return (
     <>
       {menuName && <h3 className="text-sm font-medium">{menuName}</h3>}
       <ul className="w-full flex flex-col divide-y divide-full divide-neutral-200">
-        {menuList.map((menuItem) => (
-          <li
-            key={menuItem.id}
-            className="w-full py-4 flex items-center justify-between transition-colors cursor-pointer ease-out duration-200 hover:text-lime-500"
-          >
-            <span className="text-md font-medium">{menuItem.name}</span>
-            <ChevronRight />
-          </li>
-        ))}
+        {menuList.map((menuItem) => {
+          return (
+            <li
+              onClick={() => handleAction(menuItem.id)}
+              key={menuItem.id}
+              className="w-full py-4 flex items-center justify-between transition-colors cursor-pointer ease-out duration-200 hover:text-lime-500"
+            >
+              <span className="text-md font-medium">{menuItem.name}</span>
+              <ChevronRight />
+            </li>
+          );
+        })}
       </ul>
     </>
   );

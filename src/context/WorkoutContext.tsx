@@ -3,6 +3,7 @@ import React, { ReactNode, createContext, useContext, useState } from "react";
 
 interface WorkoutContextType {
   isWorkoutPlayerOpen: boolean;
+  setIsWorkoutPlayerOpen: (val: boolean) => void;
   toggleWorkoutPlayer: () => void;
   currWorkoutId: string | null;
   setCurrWorkoutId: (arg0: string | null) => void;
@@ -42,6 +43,7 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
         setTimerStartTime,
         timerPauseTime,
         setTimerPauseTime,
+        setIsWorkoutPlayerOpen,
       }}
     >
       {children}

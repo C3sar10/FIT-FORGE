@@ -3,6 +3,8 @@ import { useWorkoutElapsed } from "@/hooks/useWorkoutElapsed";
 import { useTimer } from "@/context/TimerContext";
 import { Play } from "lucide-react";
 import { useDialog } from "@/context/DialogContext";
+import { useLogGlobal } from "@/context/LogContext";
+import { useWorkoutGlobal } from "@/context/WorkoutContext";
 
 export function TimerDisplay({ className = "" }: { className?: string }) {
   const { label } = useWorkoutElapsed();
@@ -20,7 +22,16 @@ export function TimerControls({
   labels?: { start: string; pause: string; play: string; end: string };
   onEnd?: () => void;
 }) {
-  const { state, start, pause, resume, end } = useTimer();
+  const { state, start, pause, resume, end, getElapsedMs } = useTimer();
+  const {
+    currentWorkoutLog,
+    setCurrentWorkoutLog,
+    setLogOpen,
+    setIsPostWorkoutLog,
+    updateExercisesCompleted,
+  } = useLogGlobal();
+  const { toggleWorkoutPlayer, setPlayerState, setIsWorkoutPlayerOpen } =
+    useWorkoutGlobal();
 
   const { showDialog } = useDialog();
 
@@ -33,7 +44,29 @@ export function TimerControls({
         { id: "end", label: "End Workout", variant: "danger" },
       ],
     });
-    if (res === "end") end();
+    if (res === "end") {
+      // Update log duration
+      if (currentWorkoutLog) {
+        const ms = getElapsedMs();
+        const min = Math.floor(ms / 60000);
+        const sec = Math.floor((ms % 60000) / 1000);
+        const updatedLog = {
+          ...currentWorkoutLog,
+          workoutDetails: {
+            ...currentWorkoutLog.workoutDetails,
+            duration: `${min}m ${sec}s`,
+          },
+        };
+        setCurrentWorkoutLog(updatedLog);
+        console.log("WorkoutLog:", updatedLog);
+        setIsPostWorkoutLog(true);
+        setLogOpen(true);
+      }
+      setPlayerState("inactive");
+      setIsWorkoutPlayerOpen(false);
+      // End timer
+      end();
+    }
     onEnd?.(); // your bridge will close players, etc.
   };
 

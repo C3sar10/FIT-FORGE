@@ -13,7 +13,7 @@ export interface WorkoutLogType {
     workoutTitle: string;
     workoutId: string;
     duration: string | number;
-    exerciseList: ExerciseApiType[];
+    exerciseList: ExerciseApiType[] | ExerciseType[]; //list of exercises in the workout
     exercisesCompleted: string[]; //ids of exercises completed in exerciseList
     type: string;
   };

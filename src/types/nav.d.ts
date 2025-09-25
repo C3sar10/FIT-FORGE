@@ -9,8 +9,9 @@ export interface FooterNav {
 
 export interface FooterMenuList {
   name: string;
-  id: number;
+  id: string;
   icon?: LucideIcon;
   subMenu: boolean;
   linkTo: string;
+  action?: () => void;
 }
