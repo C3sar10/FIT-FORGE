@@ -5,35 +5,10 @@ import crypto from "crypto";
 
 import User from "../models/User";
 import { signAccess, signRefresh, verifyRefresh } from "../lib/jwt";
-import { isProd, env } from "../config/env";
+import { env } from "../config/env";
 import { ApiError, errors } from "../utils/ApiError";
 
 const router = Router();
-
-// --- helpers
-const setAuthCookies = (res: any, access: string, refresh: string) => {
-  res.cookie("ff_access", access, {
-    httpOnly: true,
-    secure: isProd,
-    sameSite: "lax",
-    domain: env.COOKIE_DOMAIN,
-    path: "/",
-    maxAge: env.ACCESS_TOKEN_TTL * 1000,
-  });
-  res.cookie("ff_refresh", refresh, {
-    httpOnly: true,
-    secure: isProd,
-    sameSite: "lax",
-    domain: env.COOKIE_DOMAIN,
-    path: "/auth", // refresh cookie scoped to auth routes
-    maxAge: env.REFRESH_TOKEN_TTL * 1000,
-  });
-};
-
-const clearAuthCookies = (res: any) => {
-  res.clearCookie("ff_access", { path: "/", domain: env.COOKIE_DOMAIN });
-  res.clearCookie("ff_refresh", { path: "/auth", domain: env.COOKIE_DOMAIN });
-};
 
 // --- schemas
 const RegisterSchema = z.object({
@@ -68,9 +43,11 @@ router.post("/register", async (req, res) => {
 
   const access = signAccess({ sub: user.id });
   const refresh = signRefresh({ sub: user.id, jti: tokenId });
-  setAuthCookies(res, access, refresh);
-
-  res.json({ user: { id: user.id, name: user.name, email: user.email } });
+  res.json({
+    user: { id: user.id, name: user.name, email: user.email },
+    accessToken: access,
+    refreshToken: refresh,
+  });
 });
 
 router.post("/login", async (req, res) => {
@@ -88,17 +65,21 @@ router.post("/login", async (req, res) => {
 
   const access = signAccess({ sub: user.id });
   const refresh = signRefresh({ sub: user.id, jti: tokenId });
-  setAuthCookies(res, access, refresh);
-
-  res.json({ user: { id: user.id, name: user.name, email: user.email } });
+  res.json({
+    user: { id: user.id, name: user.name, email: user.email },
+    accessToken: access,
+    refreshToken: refresh,
+  });
 });
 
 router.get("/me", async (req, res) => {
   try {
-    const access = req.cookies?.["ff_access"];
+    const authHeader = req.headers.authorization;
+    const access = authHeader?.startsWith("Bearer ")
+      ? authHeader.split(" ")[1]
+      : null;
     if (!access) return res.json({ user: null });
 
-    // quick verify without throwing 500s
     const { verifyAccess } = await import("../lib/jwt");
     const payload = verifyAccess(access);
     const user = await User.findById(payload.sub).select("name email");
@@ -111,12 +92,12 @@ router.get("/me", async (req, res) => {
 });
 
 router.post("/refresh", async (req, res) => {
-  const token = req.cookies?.["ff_refresh"];
-  if (!token) throw errors.authInvalid();
+  const { refreshToken } = req.body; // Expect refresh token in body
+  if (!refreshToken) throw errors.authInvalid();
 
   let payload: any;
   try {
-    payload = verifyRefresh(token); // { sub, jti }
+    payload = verifyRefresh(refreshToken);
   } catch {
     throw errors.authInvalid();
   }
@@ -139,16 +120,14 @@ router.post("/refresh", async (req, res) => {
 
   const access = signAccess({ sub: user.id });
   const refresh = signRefresh({ sub: user.id, jti: newId });
-  setAuthCookies(res, access, refresh);
-
-  res.json({ ok: true });
+  res.json({ accessToken: access, refreshToken: refresh });
 });
 
 router.post("/logout", async (req, res) => {
-  const token = req.cookies?.["ff_refresh"];
-  if (token) {
+  const { refreshToken } = req.body; // Expect refresh token in body
+  if (refreshToken) {
     try {
-      const payload = verifyRefresh(token);
+      const payload = verifyRefresh(refreshToken);
       const user = await User.findById(payload.sub);
       if (user) {
         await User.updateOne(
@@ -162,10 +141,7 @@ router.post("/logout", async (req, res) => {
       /* ignore */
     }
   }
-  clearAuthCookies(res);
   res.json({ ok: true });
 });
-
-// NOTE: you'll add POST /auth/sso later for Google/Apple handoff
 
 export default router;

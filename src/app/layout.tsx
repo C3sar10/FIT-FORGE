@@ -1,20 +1,14 @@
-//import "../styles/globals.css";
+// src/app/layout.tsx
 import "../styles/globals.css";
-
-import { ThemeProvider } from "next-themes";
 import { Metadata } from "next";
 import { roboto } from "@/lib/fonts";
-import "@/lib/amplify"; // Add this
-import { AuthProvider } from "@/context/AuthContext";
-import { WorkoutProvider } from "@/context/WorkoutContext";
-import { TimerProvider } from "@/context/TimerContext";
-import TimerUiBridge from "@/components/player/TimerUiBridge";
-import { DialogProvider } from "@/context/DialogContext";
+import "@/lib/amplify";
+import Providers from "@/components/Providers";
 
 export const metadata: Metadata = {
-  title: "My App",
+  title: "FitForge",
   description:
-    "A Next.js application for users to use in excercising activies and tracking progress.",
+    "Track your workouts, log sessions, and build schedules for your fitness journey.",
 };
 
 export default function RootLayout({
@@ -23,21 +17,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={roboto.className} suppressHydrationWarning>
-      <body className="">
-        <AuthProvider>
-          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-            <TimerProvider>
-              <WorkoutProvider>
-                <DialogProvider>
-                  <TimerUiBridge />
-                  {children}
-                </DialogProvider>
-              </WorkoutProvider>
-            </TimerProvider>
-          </ThemeProvider>
-        </AuthProvider>
+    <html lang="en" suppressHydrationWarning>
+      <body className={roboto.className}>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
 }
+
