@@ -308,13 +308,13 @@ const SegmentedAuthToggle: React.FC<{
 const page = (props: Props) => {
   const [isLogin, setIsLogin] = useState(true);
   const route = useRouter();
-  const { register, login } = useAuth();
+  const { register, login, setRememberMe, rememberMe, user } = useAuth();
 
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [userPassword, setUserPassword] = useState("");
   const [userConfirmPassword, setUserConfirmPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
+  //const [rememberMe, setRememberMe] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -334,14 +334,12 @@ const page = (props: Props) => {
 
         // Call login and get tokens
         const data = await login(userEmail, userPassword);
-        // Store refresh token based on rememberMe
+        // Always set refresh token in both storages
         if (data?.refreshToken) {
           if (rememberMe) {
             localStorage.setItem("refreshToken", data.refreshToken);
-          } else {
-            sessionStorage.setItem("refreshToken", data.refreshToken);
-            localStorage.removeItem("refreshToken");
           }
+          sessionStorage.setItem("refreshToken", data.refreshToken);
         }
         route.replace("/dash/workouts"); // replace, not push
       } else {
@@ -355,14 +353,12 @@ const page = (props: Props) => {
 
         // Call register and get tokens
         const data = await register(userName, userEmail, userPassword);
-        // Store refresh token based on rememberMe
+        // Always set refresh token in both storages
         if (data?.refreshToken) {
           if (rememberMe) {
             localStorage.setItem("refreshToken", data.refreshToken);
-          } else {
-            sessionStorage.setItem("refreshToken", data.refreshToken);
-            localStorage.removeItem("refreshToken");
           }
+          sessionStorage.setItem("refreshToken", data.refreshToken);
         }
         route.replace("/dash/workouts"); // replace, not push
       }
@@ -381,6 +377,13 @@ const page = (props: Props) => {
       setSubmitting(false);
     }
   };
+
+  useEffect(() => {
+    // If user is authenticated, redirect to dashboard
+    if (user) {
+      route.replace("/dash/workouts");
+    }
+  }, [user, route]);
 
   return (
     <PageContainer>

@@ -18,6 +18,8 @@ type AuthCtx = {
   ) => Promise<{ user: User; accessToken: string; refreshToken: string }>;
   logout: () => Promise<void>;
   refreshMe: () => Promise<void>;
+  rememberMe: boolean; // Optional flag to indicate if "remember me" is enabled
+  setRememberMe: (val: boolean) => void; // Function to update "remember me" state
 };
 
 const Ctx = createContext<AuthCtx | null>(null);
@@ -25,6 +27,7 @@ const Ctx = createContext<AuthCtx | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User>(null);
   const [loading, setLoading] = useState(true);
+  const [rememberMe, setRememberMe] = useState(false); // State to track "remember me" preference
 
   // On app mount, restore session and bootstrap user in a single flow
   useEffect(() => {
@@ -32,6 +35,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const refreshToken =
         localStorage.getItem("refreshToken") ||
         sessionStorage.getItem("refreshToken");
+      console.log(
+        "[AuthProvider] refreshToken before /auth/refresh:",
+        refreshToken
+      );
       let restored = false;
       if (refreshToken) {
         try {
@@ -47,8 +54,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (res.ok) {
             console.log("Refresh token valid, session restored");
             const data = await res.json();
+            console.log("Data from /auth/refresh:", data);
             localStorage.setItem("accessToken", data.accessToken);
-            localStorage.setItem("refreshToken", data.refresh);
+            if (rememberMe) {
+              localStorage.setItem("refreshToken", data.refreshToken);
+            }
+            sessionStorage.setItem("refreshToken", data.refreshToken); // Always set both
             setUser(data.user ?? null);
             restored = true;
           } else {
@@ -78,7 +89,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string) => {
     const data = await AuthAPI.login({ email, password }); // { user, accessToken, refreshToken }
     localStorage.setItem("accessToken", data.accessToken);
-    // Don't set refreshToken here, let page.tsx handle it for rememberMe/session logic
+    //localStorage.setItem("refreshToken", data.refreshToken);
+    //sessionStorage.setItem("refreshToken", data.refreshToken);
     setUser(data.user); // update snapshot immediately
     return data;
   };
@@ -86,7 +98,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const register = async (name: string, email: string, password: string) => {
     const data = await AuthAPI.register({ name, email, password }); // { user, accessToken, refreshToken }
     localStorage.setItem("accessToken", data.accessToken);
-    // Don't set refreshToken here, let page.tsx handle it for rememberMe/session logic
+    //localStorage.setItem("refreshToken", data.refreshToken);
+    //sessionStorage.setItem("refreshToken", data.refreshToken);
     setUser(data.user); // snapshot
     return data;
   };
@@ -95,6 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await AuthAPI.logout(); // Sends refreshToken in body
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
+    sessionStorage.removeItem("refreshToken");
     setUser(null);
   };
 
@@ -104,7 +118,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <Ctx.Provider value={{ user, loading, login, register, logout, refreshMe }}>
+    <Ctx.Provider
+      value={{
+        user,
+        loading,
+        login,
+        register,
+        logout,
+        refreshMe,
+        rememberMe,
+        setRememberMe,
+      }}
+    >
       {children}
     </Ctx.Provider>
   );

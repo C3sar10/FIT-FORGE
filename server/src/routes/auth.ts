@@ -94,6 +94,18 @@ router.get("/me", async (req, res) => {
 router.post("/refresh", async (req, res) => {
   const { refreshToken } = req.body; // Expect refresh token in body
   console.log("Received refreshToken:", refreshToken);
+
+  // Debug: print session array before update
+  let userForDebug = null;
+  try {
+    const payload = verifyRefresh(refreshToken);
+    userForDebug = await User.findById(payload.sub);
+    if (userForDebug) {
+      console.log("User sessions BEFORE update:", userForDebug.sessions);
+    }
+  } catch (e) {
+    console.log("Error verifying refresh token for debug:", e);
+  }
   if (!refreshToken) {
     console.log("No refresh token provided");
     throw errors.authInvalid();
@@ -115,26 +127,43 @@ router.post("/refresh", async (req, res) => {
   }
 
   const exists = user.sessions.some((s) => s.tokenId === payload.jti);
+  console.log(
+    "Checking for session tokenId in user.sessions:",
+    payload.jti,
+    user.sessions
+  );
+  console.log("Rotating refresh token, removing old and adding new session");
   if (!exists) {
     console.log("Refresh token session not found");
     throw errors.authInvalid(); // revoked/rotated
   }
 
-  // rotate
-  const newId = crypto.randomUUID();
-  // First, remove the old session
-  await User.updateOne(
-    { _id: user._id },
-    { $pull: { sessions: { tokenId: payload.jti } } }
-  );
-  // Then, add the new session
-  await User.updateOne(
-    { _id: user._id },
-    { $push: { sessions: { tokenId: newId, createdAt: new Date() } } }
-  );
-
+  // Only rotate if token is close to expiring (less than 1 day left)
+  const now = Math.floor(Date.now() / 1000);
+  const expiresIn = payload.exp - now;
+  let newId = payload.jti;
+  let refresh = refreshToken;
+  if (expiresIn < 86400) {
+    // less than 1 day left
+    newId = crypto.randomUUID();
+    // Remove old session
+    await User.updateOne(
+      { _id: user._id },
+      { $pull: { sessions: { tokenId: payload.jti } } }
+    );
+    // Add new session
+    await User.updateOne(
+      { _id: user._id },
+      { $push: { sessions: { tokenId: newId, createdAt: new Date() } } }
+    );
+    refresh = signRefresh({ sub: user.id, jti: newId });
+  }
   const access = signAccess({ sub: user.id });
-  const refresh = signRefresh({ sub: user.id, jti: newId });
+  // Debug: print session array after update
+  const userAfterUpdate = await User.findById(user._id);
+  if (userAfterUpdate) {
+    console.log("User sessions AFTER update:", userAfterUpdate.sessions);
+  }
   res.json({
     accessToken: access,
     refreshToken: refresh,
