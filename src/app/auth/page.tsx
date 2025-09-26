@@ -308,13 +308,13 @@ const SegmentedAuthToggle: React.FC<{
 const page = (props: Props) => {
   const [isLogin, setIsLogin] = useState(true);
   const route = useRouter();
-  const { register, login } = useAuth();
+  const { register, login, setRememberMe, rememberMe, user } = useAuth();
 
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [userPassword, setUserPassword] = useState("");
   const [userConfirmPassword, setUserConfirmPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
+  //const [rememberMe, setRememberMe] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -324,6 +324,7 @@ const page = (props: Props) => {
     setErrorMsg(null);
     try {
       setSubmitting(true);
+      console.log("Upon submit, rememberMe:", rememberMe);
 
       if (isLogin) {
         if (!userEmail) throw new Error("Missing Email field");
@@ -331,7 +332,15 @@ const page = (props: Props) => {
         if (userPassword.length < 6)
           throw new Error("Password length is too short");
 
-        await login(userEmail, userPassword);
+        // Call login and get tokens
+        const data = await login(userEmail, userPassword);
+        // Always set refresh token in both storages
+        if (data?.refreshToken) {
+          if (rememberMe) {
+            localStorage.setItem("refreshToken", data.refreshToken);
+          }
+          sessionStorage.setItem("refreshToken", data.refreshToken);
+        }
         route.replace("/dash/workouts"); // replace, not push
       } else {
         if (!userName) throw new Error("Missing Name field");
@@ -342,9 +351,25 @@ const page = (props: Props) => {
         if (userPassword !== userConfirmPassword)
           throw new Error("Passwords do not match");
 
-        await register(userName, userEmail, userPassword);
+        // Call register and get tokens
+        const data = await register(userName, userEmail, userPassword);
+        // Always set refresh token in both storages
+        if (data?.refreshToken) {
+          if (rememberMe) {
+            localStorage.setItem("refreshToken", data.refreshToken);
+          }
+          sessionStorage.setItem("refreshToken", data.refreshToken);
+        }
         route.replace("/dash/workouts"); // replace, not push
       }
+      // On app mount, check for a valid refresh token and try to refresh access token
+      // Place this logic in your AuthProvider or a top-level useEffect in your app layout:
+      // useEffect(() => {
+      //   const refreshToken = localStorage.getItem("refreshToken") || sessionStorage.getItem("refreshToken");
+      //   if (refreshToken) {
+      //     // Call your refresh endpoint to get a new access token
+      //   }
+      // }, []);
     } catch (error: any) {
       // show server-provided message if available
       setErrorMsg(error?.message || "Something went wrong");
@@ -352,6 +377,13 @@ const page = (props: Props) => {
       setSubmitting(false);
     }
   };
+
+  useEffect(() => {
+    // If user is authenticated, redirect to dashboard
+    if (user) {
+      route.replace("/dash/workouts");
+    }
+  }, [user, route]);
 
   return (
     <PageContainer>
