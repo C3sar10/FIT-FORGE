@@ -23,13 +23,17 @@ type AuthCtx = {
 const Ctx = createContext<AuthCtx | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  // On app mount, check for refresh token and try to restore session
+  const [user, setUser] = useState<User>(null);
+  const [loading, setLoading] = useState(true);
+
+  // On app mount, restore session and bootstrap user in a single flow
   useEffect(() => {
-    const refreshToken =
-      localStorage.getItem("refreshToken") ||
-      sessionStorage.getItem("refreshToken");
-    if (refreshToken) {
-      (async () => {
+    (async () => {
+      const refreshToken =
+        localStorage.getItem("refreshToken") ||
+        sessionStorage.getItem("refreshToken");
+      let restored = false;
+      if (refreshToken) {
         try {
           // Call refresh endpoint
           const res = await fetch(
@@ -41,10 +45,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
           );
           if (res.ok) {
+            console.log("Refresh token valid, session restored");
             const data = await res.json();
             localStorage.setItem("accessToken", data.accessToken);
+            localStorage.setItem("refreshToken", data.refresh);
             setUser(data.user ?? null);
+            restored = true;
           } else {
+            console.log("Refresh token invalid, session not restored");
             setUser(null);
             localStorage.removeItem("accessToken");
             localStorage.removeItem("refreshToken");
@@ -52,24 +60,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         } catch {
           setUser(null);
-        } finally {
-          setLoading(false);
         }
-      })();
-    }
-  }, []);
-  const [user, setUser] = useState<User>(null);
-  const [loading, setLoading] = useState(true);
-
-  // bootstrap session on first mount
-  useEffect(() => {
-    (async () => {
-      try {
-        const data = await AuthAPI.me(); // { user: {...} | null } – uses Authorization if token exists
-        setUser(data?.user ?? null);
-      } finally {
-        setLoading(false);
       }
+      // If not restored, or no refresh token, try to bootstrap from access token
+      if (!restored) {
+        try {
+          const data = await AuthAPI.me();
+          setUser(data?.user ?? null);
+        } catch {
+          setUser(null);
+        }
+      }
+      setLoading(false);
     })();
   }, []);
 

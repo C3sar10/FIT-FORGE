@@ -324,6 +324,7 @@ const page = (props: Props) => {
     setErrorMsg(null);
     try {
       setSubmitting(true);
+      console.log("Upon submit, rememberMe:", rememberMe);
 
       if (isLogin) {
         if (!userEmail) throw new Error("Missing Email field");

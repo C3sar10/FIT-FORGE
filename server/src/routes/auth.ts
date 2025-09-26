@@ -93,34 +93,53 @@ router.get("/me", async (req, res) => {
 
 router.post("/refresh", async (req, res) => {
   const { refreshToken } = req.body; // Expect refresh token in body
-  if (!refreshToken) throw errors.authInvalid();
+  console.log("Received refreshToken:", refreshToken);
+  if (!refreshToken) {
+    console.log("No refresh token provided");
+    throw errors.authInvalid();
+  }
 
   let payload: any;
   try {
     payload = verifyRefresh(refreshToken);
+    console.log("Refresh token payload:", payload);
   } catch {
+    res.status(401).json({ error: "Invalid refresh token" });
     throw errors.authInvalid();
   }
 
   const user = await User.findById(payload.sub);
-  if (!user) throw errors.authInvalid();
+  if (!user) {
+    console.log("User not found for refresh token");
+    throw errors.authInvalid();
+  }
 
   const exists = user.sessions.some((s) => s.tokenId === payload.jti);
-  if (!exists) throw errors.authInvalid(); // revoked/rotated
+  if (!exists) {
+    console.log("Refresh token session not found");
+    throw errors.authInvalid(); // revoked/rotated
+  }
 
   // rotate
   const newId = crypto.randomUUID();
+  // First, remove the old session
   await User.updateOne(
     { _id: user._id },
-    {
-      $pull: { sessions: { tokenId: payload.jti } },
-      $push: { sessions: { tokenId: newId, createdAt: new Date() } },
-    }
+    { $pull: { sessions: { tokenId: payload.jti } } }
+  );
+  // Then, add the new session
+  await User.updateOne(
+    { _id: user._id },
+    { $push: { sessions: { tokenId: newId, createdAt: new Date() } } }
   );
 
   const access = signAccess({ sub: user.id });
   const refresh = signRefresh({ sub: user.id, jti: newId });
-  res.json({ accessToken: access, refreshToken: refresh });
+  res.json({
+    accessToken: access,
+    refreshToken: refresh,
+    user: { id: user.id, name: user.name, email: user.email },
+  });
 });
 
 router.post("/logout", async (req, res) => {

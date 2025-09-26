@@ -15,7 +15,7 @@ export default function PrivateLayout({
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !user) router.replace("/auth");
+    if (!loading && user === null) router.replace("/auth");
   }, [loading, user, router]);
 
   if (loading) return null; // or a centered spinner/skeleton
