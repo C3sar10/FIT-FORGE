@@ -331,7 +331,17 @@ const page = (props: Props) => {
         if (userPassword.length < 6)
           throw new Error("Password length is too short");
 
-        await login(userEmail, userPassword);
+        // Call login and get tokens
+        const data = await login(userEmail, userPassword);
+        // Store refresh token based on rememberMe
+        if (data?.refreshToken) {
+          if (rememberMe) {
+            localStorage.setItem("refreshToken", data.refreshToken);
+          } else {
+            sessionStorage.setItem("refreshToken", data.refreshToken);
+            localStorage.removeItem("refreshToken");
+          }
+        }
         route.replace("/dash/workouts"); // replace, not push
       } else {
         if (!userName) throw new Error("Missing Name field");
@@ -342,9 +352,27 @@ const page = (props: Props) => {
         if (userPassword !== userConfirmPassword)
           throw new Error("Passwords do not match");
 
-        await register(userName, userEmail, userPassword);
+        // Call register and get tokens
+        const data = await register(userName, userEmail, userPassword);
+        // Store refresh token based on rememberMe
+        if (data?.refreshToken) {
+          if (rememberMe) {
+            localStorage.setItem("refreshToken", data.refreshToken);
+          } else {
+            sessionStorage.setItem("refreshToken", data.refreshToken);
+            localStorage.removeItem("refreshToken");
+          }
+        }
         route.replace("/dash/workouts"); // replace, not push
       }
+      // On app mount, check for a valid refresh token and try to refresh access token
+      // Place this logic in your AuthProvider or a top-level useEffect in your app layout:
+      // useEffect(() => {
+      //   const refreshToken = localStorage.getItem("refreshToken") || sessionStorage.getItem("refreshToken");
+      //   if (refreshToken) {
+      //     // Call your refresh endpoint to get a new access token
+      //   }
+      // }, []);
     } catch (error: any) {
       // show server-provided message if available
       setErrorMsg(error?.message || "Something went wrong");
