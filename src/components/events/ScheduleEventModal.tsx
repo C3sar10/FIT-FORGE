@@ -3,6 +3,7 @@ import { useDialog } from "@/context/DialogContext";
 import { useEvent } from "@/context/EventContext";
 import { useTheme } from "next-themes";
 import React, { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { EventAPI, http } from "@/lib/api";
 import { X } from "lucide-react";
 import Alert from "../ui/Alert";
@@ -71,6 +72,7 @@ const ScheduleEventModal = (props: Props) => {
     // else do nothing, stay in log
   };
 
+  const queryClient = useQueryClient();
   const handleSave = async () => {
     try {
       if (selectValue === "workout" && !selectedWorkout) {
@@ -117,6 +119,13 @@ const ScheduleEventModal = (props: Props) => {
           tags: [],
           description: "",
           completed: false,
+        });
+
+        // Invalidate calendar events query for current month
+        const year = new Date(dateValue).getFullYear();
+        const month = new Date(dateValue).getMonth() + 1;
+        await queryClient.invalidateQueries({
+          queryKey: ["events", year, month],
         });
 
         closeEventModal();

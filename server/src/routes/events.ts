@@ -33,7 +33,7 @@ const CreateSchema = z.object({
 
 const ListQuery = z.object({
   query: z.string().trim().max(80).optional(),
-  limit: z.coerce.number().int().min(1).max(50).default(20),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
   cursor: z.string().optional(),
   scope: z.enum(["mine", "all"]).default("mine"),
 });

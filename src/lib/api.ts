@@ -121,7 +121,9 @@ export const AuthAPI = {
       (r) => r.json()
     ),
   logout: () => {
-    const refreshToken = localStorage.getItem("refreshToken");
+    const refreshToken =
+      localStorage.getItem("refreshToken") ||
+      sessionStorage.getItem("refreshToken");
     return api("/auth/logout", {
       method: "POST",
       body: refreshToken ? JSON.stringify({ refreshToken }) : undefined,

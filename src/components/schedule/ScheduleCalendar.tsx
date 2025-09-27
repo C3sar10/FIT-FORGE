@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { EventAPI } from "@/lib/api";
 import { Calendar } from "../ui/calendar";
 import { useTheme } from "next-themes";
 import {
@@ -10,6 +11,9 @@ import {
 } from "lucide-react";
 import { div } from "framer-motion/client";
 import { useEvent } from "@/context/EventContext";
+import { useQuery } from "@tanstack/react-query";
+//import type { Event } from "@/types/event";
+import { Event } from "@/types/event";
 
 type Props = {};
 
@@ -72,6 +76,54 @@ const DayBlock = ({ date, events }: DayBlockProps) => {
 };
 
 const ScheduleCalendar = (props: Props) => {
+  const [date, setDate] = useState<Date | undefined>(new Date());
+  const { theme } = useTheme();
+  const [isLight, setIsLight] = useState(theme === "light");
+  const [miniCalendar, setMiniCalendar] = useState(true);
+  const [weekStart, setWeekStart] = useState(new Date());
+
+  // Helper: get year/month string
+  const getMonthKey = (date: Date) =>
+    `${date.getFullYear()}-${date.getMonth() + 1}`;
+
+  // Use React Query for event fetching/caching
+  // Query for events for the current month
+  // Always fetch events for the current month on login or when a new event is created
+  // Only refetch if data is stale (10 min)
+  const {
+    data: monthEvents,
+    isLoading: loadingEvents,
+    refetch,
+  } = useQuery<Event[]>({
+    queryKey: ["events", weekStart.getFullYear(), weekStart.getMonth() + 1],
+    queryFn: async () => {
+      const res = await EventAPI.listByMonth(
+        weekStart.getFullYear(),
+        weekStart.getMonth() + 1
+      );
+      return res.items || [];
+    },
+    staleTime: 1000 * 60 * 10, // 10 minutes
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
+  });
+
+  // Refetch events when a new event is created (call refetch after event creation)
+  // Example: useEvent().onEventCreated = refetch
+
+  // Get events for a date from the current month
+  const getEventsForDate = (date: Date) => {
+    const events = monthEvents || [];
+    return events.filter((ev: Event) => {
+      const evDate = new Date(ev.date);
+      return (
+        evDate.getFullYear() === date.getFullYear() &&
+        evDate.getMonth() === date.getMonth() &&
+        evDate.getDate() === date.getDate()
+      );
+    });
+  };
   const { eventModalOpen, openEventModal, closeEventModal } = useEvent();
 
   // Refs for sticky calendars
@@ -90,17 +142,12 @@ const ScheduleCalendar = (props: Props) => {
     });
   };
   // Dummy events for demonstration
-  const getEventsForDate = (date: Date) => {
-    // Replace with real event fetching logic
-    if (date.getDate() % 2 === 0) return [{ id: 1 }];
-    return [];
-  };
-
+  /*
   const [date, setDate] = useState<Date | undefined>(new Date());
   const { theme } = useTheme();
   const [isLight, setIsLight] = useState(theme === "light");
   const [miniCalendar, setMiniCalendar] = useState(true);
-  const [weekStart, setWeekStart] = useState(new Date());
+  const [weekStart, setWeekStart] = useState(new Date());*/
 
   useEffect(() => {
     // Scroll selected day to top
