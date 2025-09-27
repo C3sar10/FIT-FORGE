@@ -26,11 +26,22 @@ function getWeekDates(date: Date) {
 
 const ScheduleBlock = () => {
   return (
-    <div className="w-full h-24 bg-gradient-to-r from-lime-950 to-lime-600 border border-neutral-200 rounded-2xl p-4 flex items-center justify-between gap-4">
-      <div className="h-full flex items-center gap-2">
-        <div className="rounded-full aspect-square h-full flex items-center justify-center bg-lime-700 text-2xl">
+    <div className="w-full h-24 bg-gradient-to-r from-lime-950 to-lime-600 border border-neutral-200 rounded-2xl flex items-center justify-between gap-4 overflow-hidden">
+      <div className="h-full flex items-center gap-4 p-4">
+        <div className="rounded-full aspect-square h-full flex items-center justify-center bg-lime-700 text-2xl text-white">
           W
         </div>
+        <div className="flex flex-col">
+          <span className="font-medium text-lg text-white">Push Workout</span>
+          <span className="text-sm text-neutral-300">Scheduled Workout</span>
+        </div>
+      </div>
+      <div className="h-full aspect-square w-auto bg-neutral-400">
+        <img
+          src="/running-default.webp"
+          alt=""
+          className="w-full h-full object-cover"
+        />
       </div>
     </div>
   );
@@ -87,34 +98,6 @@ const ScheduleCalendar = (props: Props) => {
   const [isLight, setIsLight] = useState(theme === "light");
   const [miniCalendar, setMiniCalendar] = useState(true);
   const [weekStart, setWeekStart] = useState(new Date());
-
-  /*
-  useEffect(() => {
-    const idx = getWeekDatesForSelected(date).findIndex(
-      (d) => date && d.toDateString() === date.toDateString()
-    );
-    // Find the scrollable parent container
-    const parent = dayBlockRefs.current[idx]?.parentElement;
-    console.log("parent", parent);
-    console.log("idx", idx);
-    console.log("dayBlockRefs", dayBlockRefs.current);
-    if (idx !== -1 && dayBlockRefs.current[idx] && parent) {
-      let offset = 0;
-      if (miniCalendar && miniCalRef.current) {
-        offset += miniCalRef.current.offsetHeight;
-      }
-      if (!miniCalendar && bigCalRef.current) {
-        offset += bigCalRef.current.offsetHeight;
-      }
-      console.log("offset", offset);
-      const blockTop = dayBlockRefs.current[idx].offsetTop;
-      console.log("blockTop", blockTop);
-      parent.scrollTo({
-        top: blockTop - offset,
-        behavior: "smooth",
-      });
-    }
-  }, [date, miniCalendar]);*/
 
   useEffect(() => {
     // Scroll selected day to top
