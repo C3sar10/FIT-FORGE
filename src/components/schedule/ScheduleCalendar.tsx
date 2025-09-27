@@ -9,6 +9,7 @@ import {
   Plus,
 } from "lucide-react";
 import { div } from "framer-motion/client";
+import { useEvent } from "@/context/EventContext";
 
 type Props = {};
 
@@ -71,6 +72,8 @@ const DayBlock = ({ date, events }: DayBlockProps) => {
 };
 
 const ScheduleCalendar = (props: Props) => {
+  const { eventModalOpen, openEventModal, closeEventModal } = useEvent();
+
   // Refs for sticky calendars
   const miniCalRef = React.useRef<HTMLDivElement | null>(null);
   const bigCalRef = React.useRef<HTMLDivElement | null>(null);
@@ -220,7 +223,10 @@ const ScheduleCalendar = (props: Props) => {
           </div>
         )}
       </div>
-      <button className="h-16 w-full max-w-[500px] mx-auto rounded-2xl bg-black hover:bg-[#1e1e1e] text-white flex items-center text-center justify-center gap-2">
+      <button
+        onClick={openEventModal}
+        className="h-16 w-full max-w-[500px] mx-auto rounded-2xl bg-black hover:bg-[#1e1e1e] text-white flex items-center text-center justify-center gap-2"
+      >
         <Plus size={16} /> <span>Schedule Event</span>
       </button>
       {/* Only show DayBlocks for the selected week, scroll selected to top */}

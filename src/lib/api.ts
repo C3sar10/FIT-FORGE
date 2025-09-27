@@ -154,3 +154,50 @@ export const LogAPI = {
     }).then((r) => r.json()),
   deleteLog: (id: string) => api(`/workoutLogs/${id}`, { method: "DELETE" }),
 };
+
+// --------- Events API ----------
+export const EventAPI = {
+  list: (
+    scope: "mine" | "all" = "mine",
+    limit = 20,
+    cursor?: string,
+    query?: string
+  ) => {
+    const params = new URLSearchParams({ scope, limit: String(limit) });
+    if (cursor) params.append("cursor", cursor);
+    if (query) params.append("query", query);
+    return api(`/events?${params.toString()}`).then((r) => r.json());
+  },
+  get: (id: string) => api(`/events/${id}`).then((r) => r.json()),
+  create: (body: any) =>
+    api("/events", { method: "POST", body: JSON.stringify(body) }).then((r) =>
+      r.json()
+    ),
+  update: (id: string, body: Partial<any>) =>
+    api(`/events/${id}`, { method: "PATCH", body: JSON.stringify(body) }).then(
+      (r) => r.json()
+    ),
+  delete: (id: string) => api(`/events/${id}`, { method: "DELETE" }),
+  // Fetch events for a specific date (mine only)
+  listByDate: (date: string, limit = 20, cursor?: string) => {
+    const params = new URLSearchParams({
+      scope: "mine",
+      limit: String(limit),
+      date,
+    });
+    if (cursor) params.append("cursor", cursor);
+    return api(`/events?${params.toString()}`).then((r) => r.json());
+  },
+  // Fetch events for a specific month (mine only)
+  listByMonth: (year: number, month: number, limit = 100, cursor?: string) => {
+    // month: 1-12
+    const params = new URLSearchParams({
+      scope: "mine",
+      limit: String(limit),
+      year: String(year),
+      month: String(month),
+    });
+    if (cursor) params.append("cursor", cursor);
+    return api(`/events?${params.toString()}`).then((r) => r.json());
+  },
+};
