@@ -189,7 +189,7 @@ const ScheduleCalendar = (props: Props) => {
              } rounded-2xl`}
       >
         {!miniCalendar ? (
-          <div ref={bigCalRef} className="">
+          <div ref={bigCalRef} className="h-full w-full">
             <Calendar
               className="w-full h-full bg-transparent max-w-[500px] mx-auto"
               mode="single"
