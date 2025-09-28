@@ -13,7 +13,7 @@ import { div } from "framer-motion/client";
 import { useEvent } from "@/context/EventContext";
 import { useQuery } from "@tanstack/react-query";
 //import type { Event } from "@/types/event";
-import { Event } from "@/types/event";
+import type { Event } from "@/types/event";
 
 type Props = {};
 
@@ -180,18 +180,30 @@ const ScheduleCalendar = (props: Props) => {
   // For mini calendar: get current week dates
   const weekDates = getWeekDates(weekStart);
 
+  // When miniCalendar toggles, some calendar libraries need a resize event to recompute dimensions (especially on mobile).
+  useEffect(() => {
+    const t = setTimeout(() => {
+      try {
+        window.dispatchEvent(new Event("resize"));
+      } catch (e) {
+        // ignore
+      }
+    }, 120); // small delay to allow DOM to update
+    return () => clearTimeout(t);
+  }, [miniCalendar]);
+
   return (
     <div className="w-full p-4 flex flex-col gap-4">
       <div
-        className={`w-full h-full sticky z-10 pb-6 top-4
+        className={`w-full sticky z-10 pb-6 top-4
              mx-auto p-4 border border-neutral-200 ${
                isLight ? "bg-white" : "bg-neutral-950"
              } rounded-2xl`}
       >
         {!miniCalendar ? (
-          <div ref={bigCalRef} className="h-full w-full">
+          <div ref={bigCalRef} className="w-full">
             <Calendar
-              className="w-full h-full bg-transparent max-w-[500px] mx-auto"
+              className="w-full bg-transparent max-w-[500px] mx-auto min-h-[360px] sm:min-h-[480px]"
               mode="single"
               selected={date}
               onSelect={setDate}
@@ -203,9 +215,11 @@ const ScheduleCalendar = (props: Props) => {
               <button
                 className="px-2 py-1 rounded "
                 onClick={() =>
-                  setWeekStart(
-                    new Date(weekStart.setDate(weekStart.getDate() - 7))
-                  )
+                  setWeekStart((prev) => {
+                    const d = new Date(prev);
+                    d.setDate(d.getDate() - 7);
+                    return d;
+                  })
                 }
               >
                 <ChevronLeft size={16} />
@@ -216,9 +230,11 @@ const ScheduleCalendar = (props: Props) => {
               <button
                 className="px-2 py-1 rounded "
                 onClick={() =>
-                  setWeekStart(
-                    new Date(weekStart.setDate(weekStart.getDate() + 7))
-                  )
+                  setWeekStart((prev) => {
+                    const d = new Date(prev);
+                    d.setDate(d.getDate() + 7);
+                    return d;
+                  })
                 }
               >
                 <ChevronRight size={16} />
