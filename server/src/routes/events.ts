@@ -16,6 +16,7 @@ const CreateSchema = z.object({
     .object({
       workoutId: z.string().optional(),
       name: z.string().optional(),
+      image: z.string().optional(),
       notes: z.string().optional(),
     })
     .optional(),

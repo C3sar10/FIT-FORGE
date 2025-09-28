@@ -24,6 +24,7 @@ const ScheduleEventModal = (props: Props) => {
       const data = await http.get<{ items: any[]; nextCursor: string | null }>(
         "/workouts?scope=all&limit=50"
       );
+
       setLibrary(data.items);
       setLibLoaded(true);
     } catch (e) {
@@ -108,6 +109,7 @@ const ScheduleEventModal = (props: Props) => {
               selectValue === "workout" ? selectedWorkout.id : undefined,
             name: selectValue === "workout" ? selectedWorkout.name : undefined,
             notes: "",
+            image: selectValue === "workout" ? selectedWorkout.image : "",
           },
           logDetails:
             selectValue === "log"
@@ -127,6 +129,8 @@ const ScheduleEventModal = (props: Props) => {
         await queryClient.invalidateQueries({
           queryKey: ["events", year, month],
         });
+        // Also invalidate the broad 'all events' session cache so ScheduleCalendar updates
+        await queryClient.invalidateQueries({ queryKey: ["events", "all"] });
 
         closeEventModal();
       }

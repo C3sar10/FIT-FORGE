@@ -3,6 +3,14 @@ import { WorkoutLogType } from "@/types/progress";
 import { ExerciseApiType } from "@/types/workout";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL!;
+if (!BASE) {
+  // Provide a clearer runtime error in dev when the API base URL isn't configured
+  // This avoids silent fetch to an invalid URL which often appears as a 404.
+  // eslint-disable-next-line no-console
+  console.error(
+    "NEXT_PUBLIC_API_URL is not set. API calls will fail. Set NEXT_PUBLIC_API_URL in your environment."
+  );
+}
 
 function buildInit(path: string, init: RequestInit = {}): RequestInit {
   const hasBody = typeof init.body !== "undefined" && init.body !== null;
@@ -28,7 +36,13 @@ function buildInit(path: string, init: RequestInit = {}): RequestInit {
 }
 
 async function request(path: string, init: RequestInit = {}) {
-  const res = await fetch(`${BASE}${path}`, buildInit(path, init));
+  const url = `${BASE}${path}`;
+  // Helpful debug: print the full URL in dev when debugging 404s
+  if (typeof window !== "undefined" && (!BASE || BASE.indexOf("http") !== 0)) {
+    // eslint-disable-next-line no-console
+    console.warn("API base URL may be misconfigured:", BASE, "full path:", url);
+  }
+  const res = await fetch(url, buildInit(path, init));
 
   if (!res.ok) {
     let msg = "Request failed";
@@ -161,7 +175,7 @@ export const LogAPI = {
 export const EventAPI = {
   list: (
     scope: "mine" | "all" = "mine",
-    limit = 20,
+    limit = 100,
     cursor?: string,
     query?: string
   ) => {
