@@ -14,10 +14,10 @@ const LogCard: React.FC<LogCardProps> = ({
   img,
 }) => (
   <div className="w-full h-full flex flex-row justify-between items-center rounded-[8px] border-2 border-white bg-zinc-800 overflow-hidden">
-    <div className="h-full flex flex-row items-center gap-8">
-        {img ? <img src={img} alt={title} className="h-full w-1/5" /> : null}
+    <div className="h-24 md:h-32 flex flex-row items-center gap-8">
+        <img src={img} alt={title} className="h-full w-1/5 md:w-1/4 lg:w-1/3 object-cover" />
         <div className="flex flex-col">
-            <div className="text-4xl font-bold text-primary my-2">{title}</div>
+            <div className="text-3xl font-bold text-primary my-2">{title}</div>
             <div className="text-xl text-gray-500 dark:text-gray-400">{description}</div>
         </div>
     </div>
