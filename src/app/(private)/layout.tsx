@@ -1,5 +1,6 @@
 // src/app/(private)/layout.tsx
 "use client";
+import ScheduleEventModal from "@/components/events/ScheduleEventModal";
 import WorkoutLogModal from "@/components/logs/WorkoutLogModal";
 import WorkoutPlayer from "@/components/player/WorkoutPlayer";
 import { useAuth } from "@/context/AuthContext";
@@ -25,6 +26,7 @@ export default function PrivateLayout({
         <>
           {children}
           <WorkoutLogModal />
+          <ScheduleEventModal />
         </>
       ) : null}
     </>

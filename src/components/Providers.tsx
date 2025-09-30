@@ -10,6 +10,7 @@ import { DialogProvider } from "@/context/DialogContext";
 import TimerUiBridge from "@/components/player/TimerUiBridge";
 import React from "react";
 import { LogProvider } from "@/context/LogContext";
+import { EventProvider } from "@/context/EventContext";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -37,12 +38,14 @@ export default function Providers({ children }: ProvidersProps) {
         >
           <TimerProvider>
             <LogProvider>
-              <WorkoutProvider>
-                <DialogProvider>
-                  <TimerUiBridge />
-                  {children}
-                </DialogProvider>
-              </WorkoutProvider>
+              <EventProvider>
+                <WorkoutProvider>
+                  <DialogProvider>
+                    <TimerUiBridge />
+                    {children}
+                  </DialogProvider>
+                </WorkoutProvider>
+              </EventProvider>
             </LogProvider>
           </TimerProvider>
         </ThemeProvider>

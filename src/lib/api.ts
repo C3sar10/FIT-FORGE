@@ -3,6 +3,14 @@ import { WorkoutLogType } from "@/types/progress";
 import { ExerciseApiType } from "@/types/workout";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL!;
+if (!BASE) {
+  // Provide a clearer runtime error in dev when the API base URL isn't configured
+  // This avoids silent fetch to an invalid URL which often appears as a 404.
+  // eslint-disable-next-line no-console
+  console.error(
+    "NEXT_PUBLIC_API_URL is not set. API calls will fail. Set NEXT_PUBLIC_API_URL in your environment."
+  );
+}
 
 function buildInit(path: string, init: RequestInit = {}): RequestInit {
   const hasBody = typeof init.body !== "undefined" && init.body !== null;
@@ -28,7 +36,13 @@ function buildInit(path: string, init: RequestInit = {}): RequestInit {
 }
 
 async function request(path: string, init: RequestInit = {}) {
-  const res = await fetch(`${BASE}${path}`, buildInit(path, init));
+  const url = `${BASE}${path}`;
+  // Helpful debug: print the full URL in dev when debugging 404s
+  if (typeof window !== "undefined" && (!BASE || BASE.indexOf("http") !== 0)) {
+    // eslint-disable-next-line no-console
+    console.warn("API base URL may be misconfigured:", BASE, "full path:", url);
+  }
+  const res = await fetch(url, buildInit(path, init));
 
   if (!res.ok) {
     let msg = "Request failed";
@@ -121,7 +135,9 @@ export const AuthAPI = {
       (r) => r.json()
     ),
   logout: () => {
-    const refreshToken = localStorage.getItem("refreshToken");
+    const refreshToken =
+      localStorage.getItem("refreshToken") ||
+      sessionStorage.getItem("refreshToken");
     return api("/auth/logout", {
       method: "POST",
       body: refreshToken ? JSON.stringify({ refreshToken }) : undefined,
@@ -153,4 +169,51 @@ export const LogAPI = {
       body: JSON.stringify(body),
     }).then((r) => r.json()),
   deleteLog: (id: string) => api(`/workoutLogs/${id}`, { method: "DELETE" }),
+};
+
+// --------- Events API ----------
+export const EventAPI = {
+  list: (
+    scope: "mine" | "all" = "mine",
+    limit = 100,
+    cursor?: string,
+    query?: string
+  ) => {
+    const params = new URLSearchParams({ scope, limit: String(limit) });
+    if (cursor) params.append("cursor", cursor);
+    if (query) params.append("query", query);
+    return api(`/events?${params.toString()}`).then((r) => r.json());
+  },
+  get: (id: string) => api(`/events/${id}`).then((r) => r.json()),
+  create: (body: any) =>
+    api("/events", { method: "POST", body: JSON.stringify(body) }).then((r) =>
+      r.json()
+    ),
+  update: (id: string, body: Partial<any>) =>
+    api(`/events/${id}`, { method: "PATCH", body: JSON.stringify(body) }).then(
+      (r) => r.json()
+    ),
+  delete: (id: string) => api(`/events/${id}`, { method: "DELETE" }),
+  // Fetch events for a specific date (mine only)
+  listByDate: (date: string, limit = 20, cursor?: string) => {
+    const params = new URLSearchParams({
+      scope: "mine",
+      limit: String(limit),
+      date,
+    });
+    if (cursor) params.append("cursor", cursor);
+    return api(`/events?${params.toString()}`).then((r) => r.json());
+  },
+  // Fetch events for a specific month (mine only)
+  listByMonth: (year: number, month: number, limit = 100, cursor?: string) => {
+    // month: 1-12
+    const params = new URLSearchParams({
+      scope: "mine",
+      limit: String(limit),
+      year: String(year),
+      month: String(month),
+    });
+    if (cursor) params.append("cursor", cursor);
+    return api(`/events?${params.toString()}`).then((r) => r.json());
+  },
 };
