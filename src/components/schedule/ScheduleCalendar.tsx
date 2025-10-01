@@ -1,4 +1,6 @@
+"use client";
 import React, { useEffect, useState } from "react";
+
 import { EventAPI } from "@/lib/api";
 import { Calendar } from "../ui/calendar";
 import { useTheme } from "next-themes";
@@ -8,12 +10,16 @@ import {
   ChevronRight,
   ChevronUp,
   Plus,
+  X,
 } from "lucide-react";
 import { div } from "framer-motion/client";
 import { useEvent } from "@/context/EventContext";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 //import type { Event } from "@/types/event";
 import type { Event } from "@/types/event";
+import { useDialog } from "@/context/DialogContext";
+import Toast from "@/components/ui/Toast";
 
 type Props = {};
 
@@ -29,51 +35,180 @@ function getWeekDates(date: Date) {
   });
 }
 
-type ScheduleBlockProps = {
+type ScheduleBlockMenuProps = {
+  menuOpen: boolean;
+  setMenuOpen: (open: boolean) => void;
   event: Event;
 };
 
-const ScheduleBlock = ({ event }: ScheduleBlockProps) => {
-  const eventTime = new Date(event.date).toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+type ScheduleBlockProps = {
+  event: Event;
+  onToast?: (t: {
+    open: boolean;
+    message: string;
+    variant?: "success" | "error" | "info";
+  }) => void;
+};
+
+const ScheduleBlock = ({ event, onToast }: ScheduleBlockProps) => {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const ref = React.useRef<HTMLDivElement | null>(null);
+  const { theme, setTheme } = useTheme();
+  const [isLight, setIsLight] = useState(theme === "light");
+  const queryClient = useQueryClient();
+  const { showDialog, closeDialog } = useDialog();
+
+  useEffect(() => {
+    setIsLight(theme === "light");
+  }, [theme]);
+
+  useEffect(() => {
+    const onDoc = (e: MouseEvent) => {
+      if (!ref.current) return;
+      if (!ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+
+  const onToggle = () => setOpen((v) => !v);
+
+  const handleDeleteEvent = async () => {
+    const res = await showDialog({
+      title: "Delete Event?",
+      message: "Are you sure you want to delete this event?",
+      actions: [
+        { id: "cancel", label: "Cancel", variant: "secondary" },
+        { id: "delete", label: "Delete Event", variant: "danger" },
+      ],
+    });
+    if (res === "delete") {
+      // Optimistic delete: snapshot caches, remove locally, call API, rollback on failure
+      const year = new Date(event.date).getFullYear();
+      const month = new Date(event.date).getMonth() + 1;
+
+      const prevAll = queryClient.getQueryData<Event[]>(["events", "all"]);
+      const prevMonth = queryClient.getQueryData<Event[]>([
+        "events",
+        year,
+        month,
+      ]);
+
+      // remove from cache immediately
+      queryClient.setQueryData<Event[] | undefined>(["events", "all"], (old) =>
+        old ? old.filter((e) => e.id !== event.id) : old
+      );
+      queryClient.setQueryData<Event[] | undefined>(
+        ["events", year, month],
+        (old) => (old ? old.filter((e) => e.id !== event.id) : old)
+      );
+
+      try {
+        await EventAPI.delete(event.id);
+        // ensure consistency by refetching the queries
+        await queryClient.invalidateQueries({
+          queryKey: ["events", year, month],
+        });
+        await queryClient.invalidateQueries({ queryKey: ["events", "all"] });
+        // show success toast via callback if provided
+        if (typeof onToast === "function")
+          onToast({ open: true, message: "Event deleted", variant: "success" });
+      } catch (err) {
+        // rollback
+        queryClient.setQueryData(["events", "all"], prevAll);
+        queryClient.setQueryData(["events", year, month], prevMonth);
+        // show error toast via callback if provided
+        if (typeof onToast === "function")
+          onToast({
+            open: true,
+            message: "Failed to delete event",
+            variant: "error",
+          });
+        console.error("Failed to delete event, rollback cache", err);
+      } finally {
+        closeDialog();
+      }
+    }
+  };
 
   return (
-    <div className="w-full h-24 bg-gradient-to-r from-lime-950 to-lime-600 border border-neutral-200 rounded-2xl flex items-center justify-between gap-4 overflow-hidden">
+    <div
+      ref={ref}
+      className="w-full h-24 bg-gradient-to-r from-lime-950 to-lime-600 border border-neutral-200 rounded-2xl flex items-center justify-between gap-4  relative cursor-pointer"
+      onClick={onToggle}
+    >
       <div className="h-full flex items-center gap-4 p-4">
         <div className="rounded-full aspect-square h-full flex items-center justify-center bg-lime-700 text-2xl text-white">
-          {
-            event.type?.charAt(0).toUpperCase() ?? "E" // Default to "E" if type is undefined
-          }
+          W
         </div>
         <div className="flex flex-col">
-          <span className="font-medium text-lg text-white leading-tight">
-            {event.title}
-          </span>
-          <span className="text-sm text-neutral-300">{eventTime}</span>
+          <span className="font-medium text-lg text-white">{event.title}</span>
+          <span className="text-sm text-neutral-300">{event.type}</span>
         </div>
       </div>
-      <div className="h-full aspect-square w-auto bg-lime-950">
-        {event.workoutDetails && event.workoutDetails.image && (
-          <img
-            src={event.workoutDetails.image}
-            alt={event.title}
-            className="w-full h-full object-cover"
-          />
-        )}
+      <div className="h-full aspect-square w-auto bg-neutral-400 rounded-r-2xl overflow-hidden">
+        <img
+          src="/running-default.webp"
+          alt=""
+          className="w-full h-full object-cover"
+        />
       </div>
+
+      {open && (
+        <div
+          className={`absolute right-3 top-3 z-50 w-44 ${
+            isLight ? "bg-white" : "bg-[#1e1e1e]"
+          } rounded-md shadow-lg border`}
+        >
+          <ul className="flex flex-col p-2 text-sm">
+            <li className="p-2 rounded hover:bg-lime-500/50 cursor-pointer">
+              Edit Event
+            </li>
+            <li
+              onClick={handleDeleteEvent}
+              className="p-2 rounded hover:bg-lime-500/50 cursor-pointer"
+            >
+              Delete Event
+            </li>
+            {event.type === "workout" &&
+              event.workoutDetails?.workoutId &&
+              (() => {
+                const workoutId = event.workoutDetails!.workoutId as string;
+                return (
+                  <li
+                    className="p-2 rounded hover:bg-neutral-100 cursor-pointer text-lime-600"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // navigate to start workout
+                      router.push(`/startworkout/${workoutId}`);
+                    }}
+                  >
+                    Start Workout
+                  </li>
+                );
+              })()}
+          </ul>
+        </div>
+      )}
     </div>
   );
 };
-
 type DayBlockProps = {
   date: Date;
   events: Array<any>;
+  onToast?: (t: {
+    open: boolean;
+    message: string;
+    variant?: "success" | "error" | "info";
+  }) => void;
 };
 const DayBlock = ({
   date,
   events,
+  onToast,
   highlighted = false,
 }: DayBlockProps & { highlighted?: boolean }) => {
   const { theme, setTheme } = useTheme();
@@ -109,7 +244,7 @@ const DayBlock = ({
         )}
         {events.length > 0 &&
           events.map((event, index) => (
-            <ScheduleBlock event={event} key={index} />
+            <ScheduleBlock event={event} key={index} onToast={onToast} />
           ))}
       </div>
     </div>
@@ -123,6 +258,11 @@ const ScheduleCalendar = (props: Props) => {
   const [miniCalendar, setMiniCalendar] = useState(true);
   const [weekStart, setWeekStart] = useState(new Date());
   const [highlightDate, setHighlightDate] = useState<Date | null>(null);
+  const [toast, setToast] = useState<{
+    open: boolean;
+    message: string;
+    variant?: "success" | "error" | "info";
+  }>({ open: false, message: "" });
 
   const selectDate = (d: Date | undefined) => {
     if (!d) return;
@@ -258,6 +398,12 @@ const ScheduleCalendar = (props: Props) => {
 
   return (
     <div className="w-full p-4 flex flex-col gap-4">
+      <Toast
+        open={toast.open}
+        message={toast.message}
+        variant={toast.variant}
+        onClose={() => setToast({ open: false, message: "" })}
+      />
       {process.env.NODE_ENV !== "production" && (
         <div className="max-w-[500px] mx-auto p-2 mb-2 text-xs text-neutral-600">
           <div>
@@ -386,6 +532,7 @@ const ScheduleCalendar = (props: Props) => {
                 !!highlightDate &&
                 d.toDateString() === highlightDate.toDateString()
               }
+              onToast={(t) => setToast(t)}
             />
           </div>
         ))}
