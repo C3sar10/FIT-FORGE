@@ -1,7 +1,7 @@
 "use client";
 import StatsCard from "@/components/ui/StatsCard";
 import LogCard from "@/components/ui/LogCard";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import React from "react";
 
 import {
@@ -21,12 +21,23 @@ import {
   ArrowRight,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
+  LineChart,
 } from "lucide-react";
 import GraphicCard from "@/components/ui/GraphicCard";
+import { useTheme } from "next-themes";
 
 type Props = {};
 
 const page = (props: Props) => {
+  const { theme, setTheme, resolvedTheme } = useTheme();
+  const [isLight, setIsLight] = useState(theme === "light");
+
+  useEffect(() => {
+    setIsLight(theme === "light");
+  }, [theme]);
+
   const [periodStart, setPeriodStart] = useState(() => {
     const today = new Date();
     const startDay = today.getDate() >= 16 ? 16 : 1;
@@ -120,8 +131,8 @@ const page = (props: Props) => {
   });
 
   return (
-    <div className="w-full h-full flex flex-col items-center px-4 gap-8">
-      <div className="w-full p-4 flex items-center justify-between">
+    <div className="w-full h-full flex flex-col items-center px-4 gap-4">
+      <div className="w-full flex items-center justify-between h-full pt-4">
         <span className="w-1/4 inline-flex items-center justify-between">
           <h1 className="text-3xl md:text-4xl font-medium">
             {viewMode === "month" ? "Month" : "Year"}
@@ -138,14 +149,18 @@ const page = (props: Props) => {
             )}
           </button>
         </span>
-        <h1 className="text-lg md:text-xl flex flex-col">
+        <h1 className="text-sm md:text-base font-mediummd:text-xl flex flex-col leading-tight">
           <p className="">{weekday}</p>
           <p className="">{fullDate}</p>
         </h1>
       </div>
-      <div className="w-full h-full flex flex-col items-center justify-center rounded-[10px] border-2 border-white">
-        <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-800 pt-12 pb-6 rounded-t-[8px]">
-          <ResponsiveContainer width={"90%"} height={300}>
+      <div className="w-full h-full flex flex-col items-center justify-center rounded-2xl overflow-hidden border border-neutral-200">
+        <div
+          className={`w-full h-full flex flex-col items-center justify-center ${
+            isLight ? "bg-white" : "bg-[#1e1e1e]"
+          } pt-12 pb-6 rounded-t-[8px]`}
+        >
+          <ResponsiveContainer width={"100%"} height={300}>
             {viewMode === "month" ? (
               <BarChart
                 data={data}
@@ -162,7 +177,6 @@ const page = (props: Props) => {
                     value: monthName2,
                     position: "insideBottom",
                     offset: -20,
-                    style: { fill: "#FFFFFF", fontSize: 20 },
                   }}
                 />
                 <YAxis
@@ -171,11 +185,15 @@ const page = (props: Props) => {
                     angle: -90,
                     position: "insideLeft",
                     dy: 80,
-                    style: { fill: "#FFFFFF", fontSize: 16 },
                   }}
                 />
                 <Tooltip />
-                <Bar dataKey="value" fill="#65A30D" /> {/* Indigo-500 */}
+                <Bar
+                  dataKey="value"
+                  fill="#65A30D"
+                  radius={[6, 6, 0, 0]}
+                />{" "}
+                {/* Indigo-500 */}
               </BarChart>
             ) : (
               <BarChart
@@ -189,7 +207,7 @@ const page = (props: Props) => {
                     value: year,
                     position: "insideBottom",
                     offset: -20,
-                    style: { fill: "#FFFFFF", fontSize: 20 },
+                    style: { fontSize: 16 },
                   }}
                 />
                 <YAxis
@@ -198,40 +216,44 @@ const page = (props: Props) => {
                     angle: -90,
                     position: "insideLeft",
                     dy: 80,
-                    style: { fill: "#FFFFFF", fontSize: 16 },
+                    style: { fontSize: 16 },
                   }}
                 />
                 <Tooltip />
-                <Bar dataKey="value" fill="#65A30D" />
+                <Bar dataKey="value" fill="#65A30D" radius={[6, 6, 0, 0]} />
               </BarChart>
             )}
           </ResponsiveContainer>
         </div>
-        <span className="w-full flex items-center justify-between px-8 py-4">
-          <span className="inline-flex items-center">
+        <span className="w-full flex items-center justify-between px-8 py-4 bg-black text-white">
+          <span className="inline-flex items-center gap-2">
             {viewMode === "month" ? (
               <>
                 <button
                   onClick={handlePrevPeriod}
                   className="text-2xl px-2 hover:cursor-pointer"
                 >
-                  {"<"}
+                  <ChevronLeft className="size-6" />
                 </button>
                 <h2 className="text-2xl md:text-3xl">{monthName2}</h2>
                 <button
                   onClick={handleNextPeriod}
                   className="text-2xl px-2 hover:cursor-pointer"
                 >
-                  {">"}
+                  <ChevronRight className="size-6" />
                 </button>
               </>
             ) : (
               <h2 className="text-2xl md:text-3xl">{year}</h2>
             )}
           </span>
-          <span className="flex flex-col">
-            <h2 className="text-xl">Total Training Time</h2>
-            <h2 className="text-xl">Time in Minutes</h2>
+          <span className="flex flex-col leading-tight text-right">
+            <h2 className="text-sm md:text-base font-medium">
+              Total Training Time
+            </h2>
+            <h2 className="text-sm md:text-base font-medium">
+              Time in Minutes
+            </h2>
           </span>
         </span>
       </div>
@@ -244,7 +266,7 @@ const page = (props: Props) => {
           description="Total Workout Time"
         />
         <StatsCard
-          icon={<Clock color="#65A30D" size={28} />}
+          icon={<LineChart color="#65A30D" size={28} />}
           format="days"
           value={data.filter((day) => day.value > 0).length}
           description="Highest Streak"
@@ -278,8 +300,8 @@ const page = (props: Props) => {
         />
       </div>
 
-      <div className="w-full flex flex-col gap-4 mt-6">
-        <h1 className="text-2xl md:text-3xl font-medium">More Analytics</h1>
+      <div className="w-full flex flex-col gap-4">
+        <h1 className="font-medium">More Analytics</h1>
         <GraphicCard
           title="My Metrics"
           description="Numerical data you track - body weight, body fat, etc."

@@ -7,19 +7,21 @@ interface LogCardProps {
   img?: string;
 }
 
-const LogCard: React.FC<LogCardProps> = ({
-  icon,
-  title,
-  description,
-  img,
-}) => (
-  <div className="w-full h-full flex flex-row justify-between items-center rounded-[8px] border-2 border-white bg-zinc-800 overflow-hidden">
-    <div className="h-24 md:h-32 flex flex-row items-center gap-8">
-        <img src={img} alt={title} className="h-full w-1/5 md:w-1/4 lg:w-1/3 object-cover" />
-        <div className="flex flex-col">
-            <div className="text-3xl font-bold text-primary my-2">{title}</div>
-            <div className="text-xl text-gray-500 dark:text-gray-400">{description}</div>
+const LogCard: React.FC<LogCardProps> = ({ icon, title, description, img }) => (
+  <div className="w-full h-[120px] flex flex-row justify-between items-center rounded-md border border-neutral-200 overflow-hidden">
+    <div className="h-full w-full flex flex-row items-center gap-4">
+      <div className="aspect-square h-full w-auto">
+        <img src={img} alt={title} className="h-full w-full object-cover" />
+      </div>
+
+      <div className="w-full h-full flex flex-col items-start justify-center">
+        <div className="text-2xl md:text-3xl font-medium text-primary leading-tight">
+          {title}
         </div>
+        <div className="text-sm md:text-base text-neutral-400">
+          {description}
+        </div>
+      </div>
     </div>
     {icon && <div className="mr-4 text-3xl">{icon}</div>}
   </div>
