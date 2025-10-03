@@ -7,6 +7,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { EventAPI, http } from "@/lib/api";
 import { X } from "lucide-react";
 import Alert from "../ui/Alert";
+import { useAuth } from "@/context/AuthContext";
 
 type Props = {};
 
@@ -17,6 +18,7 @@ const ScheduleEventModal = (props: Props) => {
   const [libLoaded, setLibLoaded] = useState(false);
   const [q, setQ] = useState("");
   const [selectedWorkout, setSelectedWorkout] = useState<any | null>(null);
+  const { user } = useAuth();
 
   // Load workouts from library (all + custom)
   const loadLibrary = async () => {
@@ -25,7 +27,13 @@ const ScheduleEventModal = (props: Props) => {
         "/workouts?scope=all&limit=50"
       );
 
-      setLibrary(data.items);
+      // Normalize items: some custom workouts may come with `_id` instead of `id`
+      const normalized = (data.items || []).map((w: any) => ({
+        ...w,
+        id: w.id || w._id || w.workoutId || undefined,
+      }));
+
+      setLibrary(normalized);
       setLibLoaded(true);
     } catch (e) {
       // Optionally handle error
@@ -97,11 +105,12 @@ const ScheduleEventModal = (props: Props) => {
       });
       if (result === "save") {
         // Save event to DB
-        await EventAPI.create({
+        const payload = {
           title:
             selectValue === "workout"
               ? selectedWorkout.name + " (Scheduled)"
               : "Scheduled Event",
+          //author: user?.id || "",
           type: selectValue === "workout" ? "workout" : "log",
           date: new Date(`${dateValue}T${timeValue}`),
           workoutDetails: {
@@ -109,19 +118,81 @@ const ScheduleEventModal = (props: Props) => {
               selectValue === "workout" ? selectedWorkout.id : undefined,
             name: selectValue === "workout" ? selectedWorkout.name : undefined,
             notes: "",
-            image: selectValue === "workout" ? selectedWorkout.image : "",
+            // ensure we don't send `null` for image (z.string().optional() does not accept null)
+            image:
+              selectValue === "workout"
+                ? selectedWorkout.image == null
+                  ? undefined
+                  : selectedWorkout.image
+                : undefined,
           },
           logDetails:
             selectValue === "log"
               ? {
+                  logId: "",
                   summary: "Scheduled Log",
                   notes: "",
                 }
-              : undefined,
+              : {
+                  logId: "",
+                  summary: "",
+                  notes: "",
+                },
           tags: [],
           description: "",
           completed: false,
-        });
+        };
+
+        // debug: log payload for custom vs global workouts
+        // eslint-disable-next-line no-console
+        console.log(
+          "Creating event payload:",
+          payload,
+          "selectedWorkout:",
+          selectedWorkout
+        );
+
+        try {
+          await EventAPI.create(payload);
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.error("Event create failed:", err);
+          try {
+            // Try a low-level fetch to capture the server response body for debugging
+            const base = (process.env.NEXT_PUBLIC_API_URL as string) || "";
+            const url = `${base}/events`;
+            const accessToken =
+              typeof window !== "undefined"
+                ? localStorage.getItem("accessToken")
+                : null;
+            const res = await fetch(url, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                ...(accessToken
+                  ? { Authorization: `Bearer ${accessToken}` }
+                  : {}),
+              },
+              body: JSON.stringify(payload),
+            });
+            const text = await res.text();
+            let body;
+            try {
+              body = text ? JSON.parse(text) : text;
+            } catch (e) {
+              body = text;
+            }
+            // eslint-disable-next-line no-console
+            console.error("Raw server response for /events:", {
+              status: res.status,
+              body,
+            });
+          } catch (fetchErr) {
+            // eslint-disable-next-line no-console
+            console.error("Failed raw fetch for /events:", fetchErr);
+          }
+          throw err;
+        }
 
         // Invalidate calendar events query for current month
         const year = new Date(dateValue).getFullYear();

@@ -147,7 +147,7 @@ export const AuthAPI = {
 
 export const LogAPI = {
   getLogs: (
-    limit = 20,
+    limit = 100,
     cursor?: string,
     fromDate?: string,
     toDate?: string

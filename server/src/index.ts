@@ -56,6 +56,7 @@ app.use(
       return res.status(400).json({
         error: "ZOD_ERROR",
         message: err.errors?.[0]?.message ?? "Invalid input",
+        details: err.errors,
       });
     }
     if (err instanceof ApiError) {

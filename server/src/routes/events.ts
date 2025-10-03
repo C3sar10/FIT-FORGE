@@ -43,7 +43,10 @@ const ListQuery = z.object({
 router.post("/", async (req, res, next) => {
   try {
     const userId = (req as any).user.userId as string;
+    // Log the incoming body first to aid debugging when parsing fails
+    console.log("Create event incoming body:", req.body);
     const dto = CreateSchema.parse(req.body);
+    console.log("Parsed dto:", dto);
 
     const doc = await Event.create({
       author: userId,

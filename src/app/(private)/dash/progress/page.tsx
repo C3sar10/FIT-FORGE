@@ -27,12 +27,17 @@ import {
 } from "lucide-react";
 import GraphicCard from "@/components/ui/GraphicCard";
 import { useTheme } from "next-themes";
+import { LogAPI } from "@/lib/api";
+import { WorkoutLogType } from "@/types/progress";
 
 type Props = {};
 
 const page = (props: Props) => {
   const { theme, setTheme, resolvedTheme } = useTheme();
   const [isLight, setIsLight] = useState(theme === "light");
+  const [userLogData, setUserLogData] = useState<WorkoutLogType[]>([]);
+  const [monthData, setMonthData] = useState<any[]>([]);
+  const [yearData, setYearData] = useState<any[]>([]);
 
   useEffect(() => {
     setIsLight(theme === "light");
@@ -68,6 +73,7 @@ const page = (props: Props) => {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const periodEndDay = day === 1 ? Math.min(15, daysInMonth) : daysInMonth;
 
+  /*
   const data = Array.from({ length: periodEndDay - day + 1 }, (_, i) => ({
     name: `${day + i}`, // day of month
     value: Math.floor(Math.random() * 60), // random minutes for now
@@ -76,7 +82,90 @@ const page = (props: Props) => {
   const yearData = Array.from({ length: 12 }, (_, i) => ({
     name: months[i],
     value: Math.floor(Math.random() * 1800), // random minutes for now
-  }));
+  }));*/
+
+  /** fetch log data for user */
+
+  const fetchLogData = async () => {
+    // just fetch all for now, will fix later
+    const res = await LogAPI.getLogs();
+    console.log("res logs: ", res);
+    setUserLogData(res.items);
+  };
+
+  useEffect(() => {
+    fetchLogData();
+  }, []);
+
+  // helper: parse duration strings like "32m 24s" -> total seconds
+  const parseDurationToSeconds = (dur?: string) => {
+    if (!dur || typeof dur !== "string") return 0;
+    // match e.g. '32m 24s' or '5m' or '45s'
+    const m = dur.match(/(\d+)m/);
+    const s = dur.match(/(\d+)s/);
+    const minutes = m ? parseInt(m[1], 10) : 0;
+    const seconds = s ? parseInt(s[1], 10) : 0;
+    return minutes * 60 + seconds;
+  };
+
+  // build monthData (per-day) and yearData (per-month) from fetched logs
+  useEffect(() => {
+    if (!userLogData || userLogData.length === 0) {
+      // initialize empty arrays for the selected period
+      const daysCount = periodEndDay - day + 1;
+      setMonthData(
+        Array.from({ length: daysCount }, (_, i) => ({
+          name: `${day + i}`,
+          value: 0,
+        }))
+      );
+      setYearData(
+        Array.from({ length: 12 }, (_, i) => ({ name: months[i], value: 0 }))
+      );
+      return;
+    }
+
+    // Aggregate seconds per day for the current period and per month for the year
+    const daysCount = periodEndDay - day + 1;
+    const monthAgg: number[] = Array.from({ length: daysCount }, () => 0);
+    const yearAgg: number[] = Array.from({ length: 12 }, () => 0);
+
+    userLogData.forEach((item) => {
+      // createdOn should be a timestamp string
+      const d = new Date(item.createdOn);
+      const itemYear = d.getFullYear();
+      const itemMonth = d.getMonth();
+      const itemDate = d.getDate();
+      const secs = parseDurationToSeconds(item.workoutDetails?.duration as any);
+
+      // accumulate into monthAgg if within the current period month/year
+      if (itemYear === year && itemMonth === month) {
+        // map day -> index
+        if (itemDate >= day && itemDate <= periodEndDay) {
+          const idx = itemDate - day;
+          monthAgg[idx] += secs;
+        }
+      }
+
+      // accumulate into yearAgg (for the selected year)
+      if (itemYear === year) {
+        yearAgg[itemMonth] += secs;
+      }
+    });
+
+    // convert seconds to minutes (rounded)
+    const monthDataOut = monthAgg.map((secs, i) => ({
+      name: `${day + i}`,
+      value: Math.round(secs / 60),
+    }));
+    const yearDataOut = yearAgg.map((secs, i) => ({
+      name: months[i],
+      value: Math.round(secs / 60),
+    }));
+
+    setMonthData(monthDataOut);
+    setYearData(yearDataOut);
+  }, [userLogData, periodStart]);
 
   const monthName2 = new Intl.DateTimeFormat("en-US", { month: "long" }).format(
     periodStart
@@ -163,7 +252,7 @@ const page = (props: Props) => {
           <ResponsiveContainer width={"100%"} height={300}>
             {viewMode === "month" ? (
               <BarChart
-                data={data}
+                data={monthData}
                 margin={{ top: 0, right: 20, bottom: 40, left: 20 }}
               >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -262,13 +351,13 @@ const page = (props: Props) => {
         <StatsCard
           icon={<Clock color="#65A30D" size={28} />}
           format="hrs"
-          value={data.filter((day) => day.value > 0).length}
+          value={monthData.filter((day) => day.value > 0).length}
           description="Total Workout Time"
         />
         <StatsCard
           icon={<LineChart color="#65A30D" size={28} />}
           format="days"
-          value={data.filter((day) => day.value > 0).length}
+          value={monthData.filter((day) => day.value > 0).length}
           description="Highest Streak"
         />
         <StatsCard
