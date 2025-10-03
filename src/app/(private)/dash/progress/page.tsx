@@ -29,6 +29,7 @@ import GraphicCard from "@/components/ui/GraphicCard";
 import { useTheme } from "next-themes";
 import { LogAPI } from "@/lib/api";
 import { WorkoutLogType } from "@/types/progress";
+import { set } from "mongoose";
 
 type Props = {};
 
@@ -38,6 +39,18 @@ const page = (props: Props) => {
   const [userLogData, setUserLogData] = useState<WorkoutLogType[]>([]);
   const [monthData, setMonthData] = useState<any[]>([]);
   const [yearData, setYearData] = useState<any[]>([]);
+
+  // stat cards data
+  const [totalWorkoutTime, setTotalWorkoutTime] = useState(0); // in minutes
+  const [highestStreak, setHighestStreak] = useState(0); // in days
+  const [favoriteWorkout, setFavoriteWorkout] = useState(""); // workout name
+  const [bestWorkoutDay, setBestWorkoutDay] = useState(""); // e.g. "Tuesday"
+  const [favWorkoutData, setFavWorkoutData] = useState<{
+    [key: number]: {
+      month: number;
+      workoutMap: { [key: string]: number };
+    }[];
+  }>({});
 
   useEffect(() => {
     setIsLight(theme === "light");
@@ -72,19 +85,6 @@ const page = (props: Props) => {
 
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const periodEndDay = day === 1 ? Math.min(15, daysInMonth) : daysInMonth;
-
-  /*
-  const data = Array.from({ length: periodEndDay - day + 1 }, (_, i) => ({
-    name: `${day + i}`, // day of month
-    value: Math.floor(Math.random() * 60), // random minutes for now
-  }));
-
-  const yearData = Array.from({ length: 12 }, (_, i) => ({
-    name: months[i],
-    value: Math.floor(Math.random() * 1800), // random minutes for now
-  }));*/
-
-  /** fetch log data for user */
 
   const fetchLogData = async () => {
     // just fetch all for now, will fix later
@@ -129,6 +129,12 @@ const page = (props: Props) => {
     const daysCount = periodEndDay - day + 1;
     const monthAgg: number[] = Array.from({ length: daysCount }, () => 0);
     const yearAgg: number[] = Array.from({ length: 12 }, () => 0);
+    const favoriteWorkoutCount: {
+      [key: number]: {
+        month: number;
+        workoutMap: { [key: string]: number };
+      }[];
+    } = {};
 
     userLogData.forEach((item) => {
       // createdOn should be a timestamp string
@@ -137,6 +143,29 @@ const page = (props: Props) => {
       const itemMonth = d.getMonth();
       const itemDate = d.getDate();
       const secs = parseDurationToSeconds(item.workoutDetails?.duration as any);
+
+      if (item.workoutDetails?.workoutTitle) {
+        if (!favoriteWorkoutCount[itemYear]) {
+          favoriteWorkoutCount[itemYear] = [];
+          favoriteWorkoutCount[itemYear][itemMonth] = {
+            month: itemMonth,
+            workoutMap: {
+              [item.workoutDetails.workoutTitle]: 1,
+            },
+          };
+        } else {
+          if (!favoriteWorkoutCount[itemYear][itemMonth]) {
+            favoriteWorkoutCount[itemYear][itemMonth] = {
+              month: itemMonth,
+              workoutMap: {},
+            };
+          }
+          const favWorkoutMonth =
+            favoriteWorkoutCount[itemYear][itemMonth].workoutMap;
+          favWorkoutMonth[item.workoutDetails.workoutTitle] =
+            (favWorkoutMonth[item.workoutDetails.workoutTitle] || 0) + 1;
+        }
+      }
 
       // accumulate into monthAgg if within the current period month/year
       if (itemYear === year && itemMonth === month) {
@@ -152,6 +181,8 @@ const page = (props: Props) => {
         yearAgg[itemMonth] += secs;
       }
     });
+
+    setFavWorkoutData(favoriteWorkoutCount);
 
     // convert seconds to minutes (rounded)
     const monthDataOut = monthAgg.map((secs, i) => ({
@@ -211,6 +242,51 @@ const page = (props: Props) => {
 
     setPeriodStart(new Date(newYear, newMonth, newDay));
   };
+
+  const StatsCardUpdate = () => {
+    //
+    if (viewMode === "month") {
+      const totalMins = monthData.reduce((sum, day) => sum + day.value, 0);
+      setTotalWorkoutTime(totalMins);
+
+      // highest streak calculation
+      let streak = 0;
+      let maxStreak = 0;
+
+      monthData.forEach((day) => {
+        if (day.value > 0) {
+          streak += 1;
+          if (streak > maxStreak) maxStreak = streak;
+        } else {
+          streak = 0;
+        }
+      });
+      setHighestStreak(maxStreak);
+      // favorite workout and best day would require more detailed log data analysis
+      // For simplicity, we'll set dummy values here
+      const favWorkoutMonth = favWorkoutData[year]?.[month]?.workoutMap || {};
+      let favWorkout;
+      if (favWorkoutMonth && Object.keys(favWorkoutMonth).length > 0) {
+        favWorkout = Object.keys(favWorkoutMonth).reduce((a, b) =>
+          favWorkoutMonth[a] > favWorkoutMonth[b] ? a : b
+        );
+      }
+
+      setFavoriteWorkout(favWorkout || "N/A");
+
+      setBestWorkoutDay("Tuesday");
+    } else {
+      const totalMins = yearData.reduce((sum, month) => sum + month.value, 0);
+      setTotalWorkoutTime(totalMins);
+      setHighestStreak(0);
+      setFavoriteWorkout("N/A");
+      setBestWorkoutDay("N/A");
+    }
+  };
+
+  useEffect(() => {
+    StatsCardUpdate();
+  }, [viewMode, monthData, favWorkoutData]);
 
   const weekday = today.toLocaleDateString("en-US", { weekday: "long" });
   const fullDate = today.toLocaleDateString("en-US", {
@@ -350,21 +426,21 @@ const page = (props: Props) => {
       <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
         <StatsCard
           icon={<Clock color="#65A30D" size={28} />}
-          format="hrs"
-          value={monthData.filter((day) => day.value > 0).length}
+          format="mins"
+          value={totalWorkoutTime}
           description="Total Workout Time"
         />
         <StatsCard
           icon={<LineChart color="#65A30D" size={28} />}
           format="days"
-          value={monthData.filter((day) => day.value > 0).length}
+          value={highestStreak}
           description="Highest Streak"
         />
         <StatsCard
           icon={
             <DumbbellIcon className="rotate-45" color="#65A30D" size={28} />
           }
-          value="Push Workout 1"
+          value={favoriteWorkout}
           description="Favorite Workout"
         />
         <StatsCard
