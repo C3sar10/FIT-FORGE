@@ -347,7 +347,7 @@ const page = (props: Props) => {
         </span>
       </div>
 
-      <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
         <StatsCard
           icon={<Clock color="#65A30D" size={28} />}
           format="hrs"
@@ -374,7 +374,7 @@ const page = (props: Props) => {
         />
       </div>
 
-      <div className="w-full flex flex-col gap-4">
+      <div className="w-full flex flex-col gap-4 mt-4">
         <LogCard
           icon={<ArrowRight size={28} />}
           title="View All Logs"
@@ -389,8 +389,8 @@ const page = (props: Props) => {
         />
       </div>
 
-      <div className="w-full flex flex-col gap-4">
-        <h1 className="font-medium">More Analytics</h1>
+      <div className="w-full flex flex-col gap-4 mt-4">
+        <h1 className="text-3xl font-medium">More Analytics</h1>
         <GraphicCard
           title="My Metrics"
           description="Numerical data you track - body weight, body fat, etc."
