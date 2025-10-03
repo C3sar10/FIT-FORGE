@@ -76,6 +76,13 @@ const ScheduleEventModal = (props: Props) => {
       ],
     });
     if (result === "confirm") {
+      // reset form
+      setSelectValue("workout");
+      setDateValue("");
+      setTimeValue("");
+      setSelectedWorkout(null);
+      setQ("");
+      setErrorMsg(null);
       closeEventModal();
     }
     // else do nothing, stay in log
@@ -143,55 +150,11 @@ const ScheduleEventModal = (props: Props) => {
           completed: false,
         };
 
-        // debug: log payload for custom vs global workouts
-        // eslint-disable-next-line no-console
-        console.log(
-          "Creating event payload:",
-          payload,
-          "selectedWorkout:",
-          selectedWorkout
-        );
-
         try {
           await EventAPI.create(payload);
         } catch (err) {
           // eslint-disable-next-line no-console
           console.error("Event create failed:", err);
-          try {
-            // Try a low-level fetch to capture the server response body for debugging
-            const base = (process.env.NEXT_PUBLIC_API_URL as string) || "";
-            const url = `${base}/events`;
-            const accessToken =
-              typeof window !== "undefined"
-                ? localStorage.getItem("accessToken")
-                : null;
-            const res = await fetch(url, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                ...(accessToken
-                  ? { Authorization: `Bearer ${accessToken}` }
-                  : {}),
-              },
-              body: JSON.stringify(payload),
-            });
-            const text = await res.text();
-            let body;
-            try {
-              body = text ? JSON.parse(text) : text;
-            } catch (e) {
-              body = text;
-            }
-            // eslint-disable-next-line no-console
-            console.error("Raw server response for /events:", {
-              status: res.status,
-              body,
-            });
-          } catch (fetchErr) {
-            // eslint-disable-next-line no-console
-            console.error("Failed raw fetch for /events:", fetchErr);
-          }
-          throw err;
         }
 
         // Invalidate calendar events query for current month
@@ -202,6 +165,13 @@ const ScheduleEventModal = (props: Props) => {
         });
         // Also invalidate the broad 'all events' session cache so ScheduleCalendar updates
         await queryClient.invalidateQueries({ queryKey: ["events", "all"] });
+        // reset form
+        setSelectValue("workout");
+        setDateValue("");
+        setTimeValue("");
+        setSelectedWorkout(null);
+        setQ("");
+        setErrorMsg(null);
 
         closeEventModal();
       }
