@@ -5,7 +5,8 @@ import { ExerciseApiType, ExerciseType } from "@/types/workout";
 import { MoreHorizontal, Star, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import React, { useEffect, useState } from "react";
-import { LogAPI } from "@/lib/api";
+import { http, LogAPI } from "@/lib/api";
+import { is } from "date-fns/locale";
 
 interface ExerciseLogLiProps {
   complete: boolean;
@@ -21,6 +22,11 @@ const ExerciseLogLi: React.FC<ExerciseLogLiProps> = ({
   const [showMenu, setShowMenu] = useState(false);
   const [isComplete, setIsComplete] = useState(complete);
   const { setCurrentWorkoutLog, currentWorkoutLog } = useLogGlobal();
+  console.log("Current Log in Li: ", currentWorkoutLog);
+  console.log("Exercise Object: ", exerciseObject);
+  const [exercise, setExercise] = useState<
+    ExerciseApiType | ExerciseType | null
+  >(exerciseObject);
 
   useEffect(() => {
     if (isLight !== (theme === "light")) {
@@ -58,6 +64,31 @@ const ExerciseLogLi: React.FC<ExerciseLogLiProps> = ({
     setIsComplete(complete);
   }, [complete]);
 
+  useEffect(() => {
+    if (
+      !exerciseObject.hasOwnProperty("title") ||
+      !exerciseObject.hasOwnProperty("name")
+    ) {
+      // fetch full exercise from api if only id is present
+      const fetchExercise = async () => {
+        try {
+          const fullExercise = await http.get(
+            `/exercises/${
+              "id" in exerciseObject
+                ? exerciseObject.id
+                : exerciseObject.exerciseId
+            }`
+          );
+          console.log("Full Exercise: ", fullExercise);
+          setExercise(fullExercise);
+        } catch (error) {
+          console.error("Error fetching exercise: ", error);
+        }
+      };
+      fetchExercise();
+    }
+  }, []);
+
   return (
     <li
       className={`w-full border border-neutral-200 rounded-md h-20 flex items-center justify-between p-2
@@ -67,13 +98,11 @@ const ExerciseLogLi: React.FC<ExerciseLogLiProps> = ({
       <div className="flex items-center gap-4 h-full">
         <div className="aspect-square rounded-sm bg-neutral-200 h-full w-auto"></div>
         <div className="flex flex-col items-start">
-          <p className="text-base">
-            {"title" in exerciseObject
-              ? exerciseObject.title
-              : exerciseObject.name}
+          <p className="text-sm sm:text-base">
+            {exercise && ("title" in exercise ? exercise.title : exercise.name)}
           </p>
           <p
-            className={`p-1 px-2 tracking-wider text-xs rounded-sm border-neutral-200 border ${
+            className={`p-1 px-2 tracking-wider text-[10px] sm:text-xs rounded-sm border-neutral-200 border ${
               isComplete
                 ? "text-lime-400 bg-lime-900"
                 : "text-red-400 bg-red-950"
@@ -109,7 +138,11 @@ const ExerciseLogLi: React.FC<ExerciseLogLiProps> = ({
   );
 };
 
-const PostWorkoutLog = () => {
+type PostWorkoutLogProps = {
+  isDone: boolean;
+};
+
+const PostWorkoutLog: React.FC<PostWorkoutLogProps> = ({ isDone }) => {
   const { logOpen, setLogOpen, currentWorkoutLog, setCurrentWorkoutLog } =
     useLogGlobal();
 
@@ -246,6 +279,16 @@ const PostWorkoutLog = () => {
     if (currentWorkoutLog) {
       setCurrentWorkoutLog({ ...currentWorkoutLog, notes: e.target.value });
     }
+  };
+
+  useEffect(() => {
+    if (isDone) handleReset();
+  }, [isDone]);
+
+  const handleReset = () => {
+    setStarRating(0);
+    setIntensityRating(0);
+    setNotes("");
   };
 
   return (
@@ -456,6 +499,8 @@ const WorkoutLogModal: React.FC<Props> = () => {
   } = useLogGlobal();
   const { showDialog } = useDialog();
 
+  const [isDone, setIsDone] = useState(false);
+
   useEffect(() => {
     if (isLight !== (theme === "light")) {
       setIsLight(theme === "light");
@@ -474,6 +519,7 @@ const WorkoutLogModal: React.FC<Props> = () => {
     if (result === "confirm") {
       setCurrentWorkoutLog(null);
       setLogOpen(false);
+      setIsDone(true);
     }
     // else do nothing, stay in log
   };
@@ -496,8 +542,9 @@ const WorkoutLogModal: React.FC<Props> = () => {
           console.error("Error saving workout log:", err);
         }
       }
-      setLogOpen(false);
+      setIsDone(true);
       setCurrentWorkoutLog(null); // Clear the log after saving
+      setLogOpen(false);
     }
     // else do nothing, stay in log
   };
@@ -514,7 +561,7 @@ const WorkoutLogModal: React.FC<Props> = () => {
         `}
       >
         <h1 className="text-2xl font-medium md:text-4xl">Log Workout</h1>
-        {isPostWorkoutLog && <PostWorkoutLog />}
+        {isPostWorkoutLog && <PostWorkoutLog isDone={isDone} />}
         <div className="w-full p-4 flex items-center gap-4 justify-end">
           <button
             className="p-4 px-6 rounded-md bg-red-700 text-white tracking-wider  hover:bg-red-900"

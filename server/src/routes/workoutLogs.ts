@@ -9,7 +9,7 @@ router.use(requireAuth);
 
 // List logs (e.g., for user, with pagination/filter)
 const ListQuery = z.object({
-  limit: z.coerce.number().int().min(1).max(50).default(20),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
   cursor: z.string().optional(), // last _id for pagination
   fromDate: z.string().optional(),
   toDate: z.string().optional(),
