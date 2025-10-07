@@ -12,6 +12,7 @@ import exerciseRouter from "./routes/exercises";
 import workoutRouter from "./routes/workouts";
 import workoutLogRouter from "./routes/workoutLogs"; // Add this
 import eventRouter from "./routes/events"; // Lazy to import here
+import planRouter from "./routes/plan";
 
 const app = express();
 
@@ -48,6 +49,7 @@ app.use("/exercises", exerciseRouter);
 app.use("/workouts", workoutRouter);
 app.use("/workoutLogs", workoutLogRouter); // Add this
 app.use("/events", eventRouter); // Lazy to import here
+app.use("/plans", planRouter);
 
 // error handler
 app.use(
