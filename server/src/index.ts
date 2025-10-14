@@ -18,6 +18,7 @@ const app = express();
 const allowedOrigins = [
   "http://localhost:3000",
   "https://fit-forge-drab.vercel.app",
+  "http://192.168.0.11:4000",
 ];
 
 const corsOptions = {
