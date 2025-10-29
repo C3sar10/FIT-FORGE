@@ -4,7 +4,7 @@ export const WorkoutBrowseDefault = [
   {
     title: "My Favorites",
     icon: Heart,
-    imgUrl: "/favorites-default.webp",
+    imgUrl: "/browse-web/favorites-default.webp",
   },
   {
     title: "New Workout",
@@ -20,16 +20,16 @@ export const WorkoutBrowseDefault = [
     title: "Workout Library",
     routeUrl: "/dash/workouts/library/exercises",
     action: true,
-    imgUrl: "/workout-library-default.webp",
+    imgUrl: "/browse-web/workout-library-default.webp",
   },
   {
     title: "Exercise Library",
-    imgUrl: "/exercise-library-default.webp",
+    imgUrl: "/browse-web/exercise-library-default.webp",
     routeUrl: "/dash/workouts/library/exercises",
     action: true,
   },
   {
     title: "My Workout Groups",
-    imgUrl: "/workout-groups-default.webp",
+    imgUrl: "/browse-web/workout-groups-default.webp",
   },
 ];

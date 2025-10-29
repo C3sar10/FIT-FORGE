@@ -40,6 +40,7 @@ router.get("/", async (req, res) => {
     lastUpdated: d.lastUpdated.toISOString(),
     description: d.description,
     workoutDetails: d.workoutDetails,
+    workoutDate: d.workoutDate,
     rating: d.rating,
     intensity: d.intensity,
     notes: d.notes,
@@ -102,6 +103,7 @@ const CreateLogSchema = z.object({
     exercisesCompleted: z.array(z.string()),
     type: z.string(),
   }),
+  workoutDate: z.string().optional(),
   rating: z.number().min(0).max(5).optional(),
   intensity: z.number().min(0).max(10).optional(),
   notes: z.string().optional(),
@@ -121,6 +123,7 @@ router.post("/", async (req, res) => {
       workoutTimestamp: new Date(dto.workoutDetails.workoutTimestamp), // Convert string to Date
       workoutId: new Types.ObjectId(dto.workoutDetails.workoutId), // Ensure ObjectId
     },
+    workoutDate: dto.workoutDate ? new Date(dto.workoutDate) : undefined,
     rating: dto.rating,
     intensity: dto.intensity,
     notes: dto.notes,

@@ -267,6 +267,7 @@ const WorkoutPlayer = (props: Props) => {
             userId: user?.id ?? "",
             userName: user?.name ?? "",
             title: workoutData.name ?? "Workout Log",
+            workoutDate: now.toISOString(),
             createdOn: now.toISOString(),
             lastUpdated: now.toISOString(),
             description: `Workout completed on ${now.toLocaleDateString()} at ${now.toLocaleTimeString()}`,

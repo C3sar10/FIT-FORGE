@@ -455,13 +455,13 @@ const page = (props: Props) => {
           icon={<ArrowRight size={28} />}
           title="View All Logs"
           description="Take a look at your log history"
-          img="../pull-day-default.jpg"
+          img="/browse-web/pull-day-default.jpg"
         />
         <LogCard
           icon={<ArrowRight size={28} />}
           title="Plans Progress"
           description="View each plan's progress"
-          img="../workout-library-default.jpg"
+          img="/browse-web/workout-library-default.jpg"
         />
       </div>
 

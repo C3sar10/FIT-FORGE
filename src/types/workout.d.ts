@@ -31,12 +31,12 @@ export interface WorkoutApiType {
   id: string;
   description: string;
   author: string;
-  type: String;
-  tags: String[];
+  type: string;
+  tags: string[];
   isFavorite: boolean;
   blocks: [
     {
-      title: String;
+      title: string;
       items: WorkoutItem[];
     }
   ];

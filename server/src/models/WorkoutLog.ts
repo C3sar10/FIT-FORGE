@@ -6,6 +6,7 @@ const WorkoutLogSchema = new Schema(
     userName: { type: String, required: true }, // Denormalized for quick display
     title: { type: String, required: true },
     createdOn: { type: Date, default: Date.now }, // Auto-set on create
+    workoutDate: { type: Date }, // Date of the workout
     lastUpdated: { type: Date, default: Date.now }, // Update on save
     description: { type: String },
     workoutDetails: {

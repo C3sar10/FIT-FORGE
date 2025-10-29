@@ -5,6 +5,7 @@ export interface WorkoutLogType {
   userId: string;
   userName: string;
   title: string;
+  workoutDate?: string;
   createdOn: string;
   lastUpdated: string;
   description: string;

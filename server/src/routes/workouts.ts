@@ -137,7 +137,9 @@ router.get("/", async (req, res) => {
   const docs = await Workout.find(filter)
     .sort({ _id: -1 })
     .limit(limit + 1)
-    .select("name tags image isFavorite updatedAt blocks")
+    .select(
+      "name tags image type isFavorite updatedAt blocks description author"
+    )
     .lean();
 
   const nextCursor = docs.length > limit ? String(docs[limit]._id) : null;
@@ -149,10 +151,18 @@ router.get("/", async (req, res) => {
     image: d.image ?? null, // include for cards
     isFavorite: !!d.isFavorite,
     updatedAt: d.updatedAt,
-    preview: ((d.blocks?.[0]?.items ?? []) as any[]).slice(0, 2).map((i) => ({
-      exerciseId: String(i.exerciseId),
-      sets: i.sets ?? null,
-      reps: i.reps ?? null,
+    author: d.author,
+    type: d.type ?? "d has no type",
+    description: d.description ?? "",
+    blocks: d.blocks?.map((b: any) => ({
+      title: b.title,
+      items: (b.items ?? []).map((i: any) => ({
+        exerciseId: String(i.exerciseId),
+        sets: i.sets ?? null,
+        reps: i.reps ?? null,
+        restSecs: i.restSecs ?? null,
+        name: i.name ?? undefined,
+      })),
     })),
   }));
 
