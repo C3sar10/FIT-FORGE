@@ -4,7 +4,7 @@ import MainSearchInput from "@/components/ui/MainSearchInput";
 import FeaturedWorkoutsSection from "@/components/workouts/FeaturedWorkoutsSection";
 import SmallBrowseCards from "@/components/workouts/SmallBrowseCards";
 import { api, fetchMine } from "@/lib/api";
-import { ExerciseApiType, ExerciseType } from "@/types/workout";
+import { ExerciseType } from "@/types/workout";
 import { Edit, LucideIcon, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
@@ -39,10 +39,8 @@ const ActionButton: React.FC<ActionButtonProps> = ({ name, Icon, action }) => {
 
 const page = (props: Props) => {
   const [featuredList, setFeaturedList] = useState([]);
-  const [libraryList, setLibraryList] = useState<ExerciseApiType[] | null>(
-    null
-  );
-  const [customList, setCustomList] = useState<ExerciseApiType[] | null>(null);
+  const [libraryList, setLibraryList] = useState<ExerciseType[] | null>(null);
+  const [customList, setCustomList] = useState<ExerciseType[] | null>(null);
 
   const router = useRouter();
 

@@ -16,7 +16,7 @@ const WorkoutLogSchema = new Schema(
       duration: { type: Schema.Types.Mixed }, // String or number (e.g., "30min" or 1800 secs)
       exerciseList: [
         {
-          type: Schema.Types.Mixed, // Flexible for ExerciseApiType fields (title, sets, reps, etc.)
+          type: Schema.Types.Mixed,
         },
       ],
       exercisesCompleted: [{ type: String }], // Array of exercise IDs completed

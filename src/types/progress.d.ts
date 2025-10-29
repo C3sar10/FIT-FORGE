@@ -1,4 +1,4 @@
-import { ExerciseApiType } from "./workout";
+import { ExerciseType } from "./workout";
 
 export interface WorkoutLogType {
   logId: string;
@@ -14,7 +14,7 @@ export interface WorkoutLogType {
     workoutTitle: string;
     workoutId: string;
     duration: string | number;
-    exerciseList: ExerciseApiType[] | ExerciseType[]; //list of exercises in the workout
+    exerciseList: ExerciseType[]; //list of exercises in the workout
     exercisesCompleted: string[]; //ids of exercises completed in exerciseList
     type: string;
   };

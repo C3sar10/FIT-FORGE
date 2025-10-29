@@ -368,7 +368,7 @@ const PostWorkoutLog: React.FC<PostWorkoutLogProps> = ({ isDone }) => {
                     //console.log("Exercise List: ", exercise.exerciseId);
                     isComplete =
                       currentWorkoutLog.workoutDetails.exercisesCompleted.includes(
-                        exercise.exerciseId
+                        exercise.id
                       );
                     //console.log("Exer is complete: ", isComplete);
                   }
@@ -581,8 +581,6 @@ const CustomLog: React.FC<PostWorkoutLogProps> = ({ isDone }) => {
     if (exercisePickerOpen && !exerciseLibLoaded) loadExerciseLibrary();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exercisePickerOpen]);
-
-  //const [selected, setSelected] = useState<WorkoutApiType[]>([]); // up to 12
 
   const filtered = useMemo(() => {
     const qq = q.trim().toLowerCase();
@@ -1036,12 +1034,10 @@ const CustomLog: React.FC<PostWorkoutLogProps> = ({ isDone }) => {
                             currentWorkoutLog.workoutDetails.exercisesCompleted.includes(
                               exercise.id
                             );
-                          //console.log("Exer is complete: ", isComplete);
                         } else {
-                          //console.log("Exercise List: ", exercise.exerciseId);
                           isComplete =
                             currentWorkoutLog.workoutDetails.exercisesCompleted.includes(
-                              exercise.exerciseId
+                              exercise.id
                             );
                           //console.log("Exer is complete: ", isComplete);
                         }

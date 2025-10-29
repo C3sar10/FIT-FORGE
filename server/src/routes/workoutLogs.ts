@@ -97,7 +97,7 @@ const CreateLogSchema = z.object({
     duration: z.union([z.string(), z.number()]),
     exerciseList: z.array(
       z.object({
-        /* Match ExerciseApiType structure */
+        /* Match structure */
       })
     ),
     exercisesCompleted: z.array(z.string()),
