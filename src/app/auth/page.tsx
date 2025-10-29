@@ -263,14 +263,12 @@ const SegmentedAuthToggle: React.FC<{
         aria-label="Auth mode"
         className="relative grid grid-cols-2 items-center rounded-full bg-lime-500/20 p-1 h-[80px] cursor-pointer"
       >
-        {/* Active pill */}
         <span
           aria-hidden
           className={`pointer-events-none absolute inset-y-1 w-1/2 rounded-full bg-lime-500  transition-all duration-200 ease-out ${
             isLogin ? "left-1" : "left-1/2"
           }`}
         />
-        {/* Buttons */}
         <button
           role="tab"
           aria-selected={isLogin}
@@ -362,14 +360,6 @@ const page = (props: Props) => {
         }
         route.replace("/dash/workouts"); // replace, not push
       }
-      // On app mount, check for a valid refresh token and try to refresh access token
-      // Place this logic in your AuthProvider or a top-level useEffect in your app layout:
-      // useEffect(() => {
-      //   const refreshToken = localStorage.getItem("refreshToken") || sessionStorage.getItem("refreshToken");
-      //   if (refreshToken) {
-      //     // Call your refresh endpoint to get a new access token
-      //   }
-      // }, []);
     } catch (error: any) {
       // show server-provided message if available
       setErrorMsg(error?.message || "Something went wrong");
@@ -462,4 +452,3 @@ const page = (props: Props) => {
 };
 
 export default page;
-``;

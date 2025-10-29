@@ -1,6 +1,6 @@
 // src/lib/api.ts
 import { WorkoutLogType } from "@/types/progress";
-import { ExerciseApiType } from "@/types/workout";
+import { ExerciseType } from "@/types/workout";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL!;
 if (!BASE) {
@@ -119,7 +119,7 @@ export async function fetchMine(limit = 20, cursor?: string) {
   if (cursor) params.append("cursor", cursor);
   const res = await api(`/exercises?${params.toString()}`);
   return (await res.json()) as {
-    items: ExerciseApiType[];
+    items: ExerciseType[];
     nextCursor: string | null;
   };
 }

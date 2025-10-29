@@ -1,22 +1,3 @@
-export interface ExerciseType {
-  exerciseId: string;
-  name: string;
-  sets: Number;
-  reps: string;
-  restSecs: number;
-  image?: string;
-  tags?: string[];
-}
-
-export interface WorkoutType {
-  name: string;
-  tags: string[];
-  image?: string;
-  id: string;
-  description: string;
-  author: string;
-}
-
 export interface WorkoutItem {
   name: String;
   sets: number;
@@ -24,7 +5,7 @@ export interface WorkoutItem {
   restSecs: number;
 }
 
-export interface WorkoutApiType {
+export interface WorkoutType {
   name: string;
   tags: string[];
   image?: string;
@@ -42,7 +23,15 @@ export interface WorkoutApiType {
   ];
 }
 
-export interface ExerciseApiType {
+export interface WorkoutBlockItem {
+  name: string;
+  exerciseId: string;
+  sets: number;
+  reps: string;
+  restSecs: number;
+}
+
+export interface ExerciseType {
   author: string;
   description: string;
   details: {

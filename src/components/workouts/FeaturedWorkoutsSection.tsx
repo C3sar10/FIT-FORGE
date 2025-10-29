@@ -3,16 +3,9 @@ import LargeFeatureCards from "../ui/LargeFeatureCards";
 import { api } from "@/lib/api";
 import LargeSkeletonCards from "../ui/LargeSkeletonCards";
 import { useQuery } from "@tanstack/react-query"; // Add this
+import { WorkoutType } from "@/types/workout";
 
 type Props = {};
-
-interface FeaturedItem {
-  id: string;
-  image?: string;
-  isFavorite: boolean;
-  name: string;
-  tags: string[];
-}
 
 const FeaturedWorkoutsSection = (props: Props) => {
   const [featuredList, setFeaturedList] = useState([]);
@@ -30,7 +23,7 @@ const FeaturedWorkoutsSection = (props: Props) => {
   useEffect(() => {
     if (data) {
       // Filter and shuffle client-side from cached data
-      const featuredPool = data.filter((w: any) =>
+      const featuredPool = data.filter((w: WorkoutType) =>
         (w.tags ?? []).includes("featured")
       );
       // Shuffle
@@ -54,7 +47,7 @@ const FeaturedWorkoutsSection = (props: Props) => {
             ? Array(4)
                 .fill(0)
                 .map((_, index) => <LargeSkeletonCards key={index} />)
-            : featuredList.map((item: FeaturedItem) => (
+            : featuredList.map((item: WorkoutType) => (
                 <LargeFeatureCards
                   key={item.id}
                   title={item.name}

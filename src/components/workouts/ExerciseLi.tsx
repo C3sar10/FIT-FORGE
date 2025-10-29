@@ -12,7 +12,7 @@ interface ExerciseLiProps {
 const ExerciseLi: React.FC<ExerciseLiProps> = ({ exerciseObj }) => {
   const router = useRouter();
   const handleExerDetails = () => {
-    router.push(`/exercisepreview/${exerciseObj.exerciseId}`);
+    router.push(`/exercisepreview/${exerciseObj.id}`);
   };
 
   return (
@@ -23,11 +23,15 @@ const ExerciseLi: React.FC<ExerciseLiProps> = ({ exerciseObj }) => {
       <div className="flex items-center">
         <Check size={28} className="mr-4" />
         <div className="flex flex-col items-start">
-          <h2 className="text-base font-medium">{exerciseObj.name}</h2>
+          <h2 className="text-base font-medium">{exerciseObj.title}</h2>
           <div className="flex items-center gap-1 text-sm">
-            <p>Sets {exerciseObj.sets && exerciseObj.sets.toLocaleString()}</p>
+            <p>
+              Sets{" "}
+              {exerciseObj.details.sets &&
+                exerciseObj.details.sets.toLocaleString()}
+            </p>
             <p>|</p>
-            <p>Reps {exerciseObj.reps}</p>
+            <p>Reps {exerciseObj.details.reps}</p>
           </div>
         </div>
       </div>

@@ -1,13 +1,10 @@
 "use client";
 import BrowseSearchContainer from "@/components/ui/BrowseSearchContainer";
 import FeaturedWorkoutsSection from "@/components/workouts/FeaturedWorkoutsSection";
-import React, { useEffect, useState } from "react";
 
 type Props = {};
 
 const page = (props: Props) => {
-  const [seedExercises, setSeedExercises] = useState([]);
-
   const currentDate = new Date();
   const year = currentDate.getFullYear();
   const month = currentDate.toLocaleString("default", { month: "short" });

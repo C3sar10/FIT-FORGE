@@ -3,7 +3,7 @@ import PageContainer from "@/components/ui/PageContainer";
 import { useAuth } from "@/context/AuthContext";
 import { useDialog } from "@/context/DialogContext";
 import { http } from "@/lib/api";
-import { ExerciseApiType } from "@/types/workout";
+import { ExerciseType } from "@/types/workout";
 import {
   ArrowLeft,
   ChevronDown,
@@ -89,16 +89,11 @@ const StartExerciseHeader: React.FC<HeaderProps> = ({
 };
 
 /* ---------------- Body w/ Edit & Delete ---------------- */
-type DetailsType = {
-  sets?: number;
-  reps?: string | number | null;
-  restSecs?: number;
-  equipment?: string[];
-};
 
 function toStringList(a?: string[]) {
   return (a ?? []).join(", ");
 }
+
 function fromStringList(s: string) {
   return s
     .split(",")
@@ -108,9 +103,9 @@ function fromStringList(s: string) {
 }
 
 interface BodyProps {
-  exercise: ExerciseApiType;
+  exercise: ExerciseType;
   canEdit: boolean;
-  onUpdated: (next: ExerciseApiType) => void;
+  onUpdated: (next: ExerciseType) => void;
   onDeleted: () => void;
 }
 const StartExerciseBody: React.FC<BodyProps> = ({
@@ -153,7 +148,7 @@ const StartExerciseBody: React.FC<BodyProps> = ({
     setEquipmentInput(toStringList(exercise.details?.equipment as any));
     setIsEditing(false);
     setDropDown(false);
-  }, [exercise.id]); // eslint-disable-line
+  }, [exercise.id]);
 
   const toggleDropDown = () => setDropDown((d) => !d);
 
@@ -214,7 +209,7 @@ const StartExerciseBody: React.FC<BodyProps> = ({
     // Clean undefineds
     const cleaned = JSON.parse(JSON.stringify(payload));
 
-    const updated = await http.patch<ExerciseApiType>(
+    const updated = await http.patch<ExerciseType>(
       `/exercises/${exercise.id}`,
       cleaned
     );
@@ -277,10 +272,10 @@ const StartExerciseBody: React.FC<BodyProps> = ({
               <li className="w-full flex flex-col gap-1">
                 <p className="font-medium">Equipment You Will Need</p>
                 <ul className="list-disc flex flex-col pl-4">
-                  {equipmentList.length ? (
+                  {equipmentList.length > 0 ? (
                     equipmentList.map((item, i) => <li key={i}>{item}</li>)
                   ) : (
-                    <li>—</li>
+                    <li>No Equipment needed.</li>
                   )}
                 </ul>
               </li>
@@ -470,19 +465,17 @@ const Page = () => {
   const { showDialog } = useDialog();
   const router = useRouter();
 
-  const [currExercise, setCurrExercise] = useState<ExerciseApiType | null>(
-    null
-  );
+  const [currExercise, setCurrExercise] = useState<ExerciseType | null>(null);
   const [mount, setMount] = useState(false);
 
   // Try direct /exercises/:id, else list fallback
   const fetchCurrExercise = async (id: string) => {
     try {
-      const data = await http.get<ExerciseApiType>(`/exercises/${id}`);
+      const data = await http.get<ExerciseType>(`/exercises/${id}`);
       setCurrExercise(data);
     } catch {
       const resp = await http.get<{
-        items: ExerciseApiType[];
+        items: ExerciseType[];
         nextCursor: string | null;
       }>(`/exercises?scope=all&limit=50`);
       setCurrExercise(resp.items.find((x) => x.id === id) || null);
@@ -494,8 +487,7 @@ const Page = () => {
     if (exerciseId) fetchCurrExercise(exerciseId);
   }, [exerciseId]);
 
-  if (!mount) return null;
-  if (!currExercise)
+  if (!mount || !currExercise)
     return (
       <PageContainer>
         <main className="p-6">Loading…</main>
@@ -509,7 +501,7 @@ const Page = () => {
     myId &&
     String(currExercise.author) === String(myId);
 
-  const handleUpdated = (next: ExerciseApiType) => {
+  const handleUpdated = (next: ExerciseType) => {
     setCurrExercise(next);
   };
 

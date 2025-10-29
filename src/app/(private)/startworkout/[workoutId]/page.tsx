@@ -7,12 +7,7 @@ import { useDialog } from "@/context/DialogContext";
 import { useTimer } from "@/context/TimerContext";
 import { useWorkoutGlobal } from "@/context/WorkoutContext";
 import { api, http } from "@/lib/api";
-import {
-  ExerciseApiType,
-  ExerciseType,
-  WorkoutApiType,
-  WorkoutType,
-} from "@/types/workout";
+import { ExerciseType, WorkoutType } from "@/types/workout";
 import {
   ArrowLeft,
   Check,
@@ -156,9 +151,9 @@ const StartWorkoutBody = ({
   onDeleted,
 }: {
   exerciseList: ExerciseType[];
-  workout: WorkoutApiType & { id: string };
+  workout: WorkoutType & { id: string };
   canEdit: boolean;
-  onUpdated: (next: WorkoutApiType & { id: string }) => void;
+  onUpdated: (next: WorkoutType & { id: string }) => void;
   onDeleted: () => void;
 }) => {
   const {
@@ -179,40 +174,6 @@ const StartWorkoutBody = ({
   const [description, setDescription] = useState(workout.description || "");
   const [tagsInput, setTagsInput] = useState(toStringList(workout.tags));
 
-  // Selected exercises (simple single block "Main")
-  /*
-  const initialSelected: ExerciseCard[] = useMemo(() => {
-    const seen = new Set<string>();
-    const out: ExerciseCard[] = [];
-    exerciseList.forEach((i: ExerciseType | ExerciseApiType) => {
-      let id;
-      let newCard: ExerciseCard = {
-        id: "",
-        title: "",
-        tags: [],
-        image: "",
-      };
-      if ("exerciseId" in i) {
-        id = String(i.exerciseId);
-        newCard = { ...newCard, id: id, title: i.name, image: i.image ?? null };
-      } else {
-        id = String(i.id);
-        newCard = {
-          id: id,
-          title: i.title,
-          image: i.image ?? null,
-          tags: i.tags,
-        };
-      }
-
-      if (!seen.has(id)) {
-        seen.add(id);
-        out.push(newCard);
-      }
-    });
-    return out;
-  }, [exerciseList, workout.blocks]);*/
-  // Selected exercises (simple single block "Main")
   const initialSelected: ExerciseCard[] = useMemo(() => {
     const seen = new Set<string>();
     const out: ExerciseCard[] = [];
@@ -223,10 +184,10 @@ const StartWorkoutBody = ({
       if (!seen.has(id)) {
         seen.add(id);
         // Fallback to exerciseList for title/image if available
-        const matchingExercise = exerciseList.find((e) => e.exerciseId === id);
+        const matchingExercise = exerciseList.find((e) => e.id === id);
         out.push({
           id,
-          title: matchingExercise?.name ?? "Unknown Exercise",
+          title: matchingExercise?.title ?? "Unknown Exercise",
           tags: matchingExercise?.tags ?? [],
           image: matchingExercise?.image ?? null,
         });
@@ -234,8 +195,6 @@ const StartWorkoutBody = ({
     });
     return out;
   }, [workout.blocks, exerciseList]);
-
-  //console.log("initial selected exercises: ", initialSelected);
 
   const [selected, setSelected] = useState<ExerciseCard[]>(initialSelected);
 
@@ -353,7 +312,7 @@ const StartWorkoutBody = ({
       ],
     };
 
-    const updated = await http.patch<WorkoutApiType & { id: string }>(
+    const updated = await http.patch<WorkoutType & { id: string }>(
       `/workouts/${workout.id}`,
       JSON.parse(JSON.stringify(payload))
     );
@@ -386,10 +345,7 @@ const StartWorkoutBody = ({
             <ul className="w-full flex flex-col gap-2">
               {exerciseList.length > 0 &&
                 exerciseList.map((exercise) => (
-                  <ExerciseLi
-                    exerciseObj={exercise}
-                    key={exercise.exerciseId}
-                  />
+                  <ExerciseLi exerciseObj={exercise} key={exercise.id} />
                 ))}
               {exerciseList.length <= 0 &&
                 Array(5)
@@ -641,7 +597,7 @@ const StartWorkoutBody = ({
 /* ---------------- Page wrapper ---------------- */
 const page = () => {
   const { workoutId } = useParams() as { workoutId: string };
-  const [currWorkout, setCurrWorkout] = useState<WorkoutApiType | null>(null);
+  const [currWorkout, setCurrWorkout] = useState<WorkoutType | null>(null);
   const [exerciseList, setExerciseList] = useState<ExerciseType[]>([]);
   const [mount, setMount] = useState(false);
 
@@ -655,7 +611,7 @@ const page = () => {
     data: workoutData,
     isLoading: workoutLoading,
     error: workoutError,
-  } = useQuery<WorkoutApiType, Error>({
+  } = useQuery<WorkoutType, Error>({
     queryKey: ["workout", workoutId],
     queryFn: async () => {
       const res = await api(`/workouts/${workoutId}`);
@@ -667,19 +623,16 @@ const page = () => {
   // Fetch exercises in parallel, cache each
   useEffect(() => {
     if (workoutData) {
-      console.log("Workout data:", workoutData);
       setCurrWorkout(workoutData);
       const fetchExercises = async () => {
         const flatIds = (workoutData.blocks ?? []).flatMap((b: any) =>
           (b.items ?? []).map((i: any) => i.exerciseId)
         );
-        console.log("Flat list:", flatIds);
         const uniqueIds = [...new Set(flatIds)]; // Avoid duplicate fetches
-        console.log("Unique IDs:", uniqueIds);
         const exercises = await Promise.all(
           uniqueIds.map(async (id) => {
             try {
-              const data = await queryClient.fetchQuery<ExerciseApiType>({
+              const data = await queryClient.fetchQuery<ExerciseType>({
                 queryKey: ["exercise", id],
                 queryFn: async () => {
                   const res = await api(`/exercises/${id}`);
@@ -695,24 +648,11 @@ const page = () => {
             }
           })
         );
-        console.log(
-          "Exercises list in startworkout page, useEffect:",
-          exercises
-        );
-        // Filter out nulls and map to ExerciseType
+
         const validExercises = exercises.filter(
-          (e): e is ExerciseApiType => e !== null
+          (e): e is ExerciseType => e !== null
         );
-        const exerciseMap = new Map(validExercises.map((e) => [e.id, e]));
-        const fullList = flatIds.map((id) => ({
-          exerciseId: id,
-          name: exerciseMap.get(id)?.title ?? "Unknown Exercise",
-          sets: exerciseMap.get(id)?.details.sets ?? 0,
-          reps: exerciseMap.get(id)?.details.reps ?? "",
-          restSecs: exerciseMap.get(id)?.details.restSecs ?? 0,
-          image: exerciseMap.get(id)?.image ?? "",
-        }));
-        setExerciseList(fullList);
+        setExerciseList(validExercises);
       };
       fetchExercises().catch((err) => {
         console.error("Exercise fetch error:", err);
@@ -751,7 +691,7 @@ const page = () => {
     myId &&
     String(currWorkout.author) === String(myId);
 
-  const handleUpdated = (next: WorkoutApiType & { id: string }) => {
+  const handleUpdated = (next: WorkoutType & { id: string }) => {
     setCurrWorkout(next);
     // refresh the list view
     const flat: ExerciseType[] = (next.blocks ?? []).flatMap((b: any) =>
@@ -781,7 +721,9 @@ const page = () => {
           imageUrl={currWorkout.image}
           id={currWorkout.id}
           description={currWorkout.description}
-          author={currWorkout.author}
+          author={
+            currWorkout.author === "global" ? "FitForge" : user?.name ?? "You"
+          }
         />
         <StartWorkoutBody
           exerciseList={exerciseList}

@@ -3,8 +3,10 @@ import FeaturedExercisesSection from "@/components/exercises/FeaturedExercisesSe
 import MainSearchInput from "@/components/ui/MainSearchInput";
 import SmallBrowseCards from "@/components/workouts/SmallBrowseCards";
 import { api, fetchMine } from "@/lib/api";
-import { ExerciseApiType, ExerciseType } from "@/types/workout";
+import { ExerciseType } from "@/types/workout";
+import { useQuery } from "@tanstack/react-query";
 import { Edit, LucideIcon, Plus } from "lucide-react";
+import { set } from "mongoose";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 
@@ -14,15 +16,6 @@ interface ActionButtonProps {
   name: string;
   Icon: LucideIcon | null;
   action?: () => void;
-}
-
-interface FeaturedItem {
-  id: string;
-  image?: string;
-  isFavorite: boolean;
-  title: string;
-  tags: string[];
-  description: string;
 }
 
 const ActionButton: React.FC<ActionButtonProps> = ({ name, Icon, action }) => {
@@ -38,43 +31,46 @@ const ActionButton: React.FC<ActionButtonProps> = ({ name, Icon, action }) => {
 
 const page = (props: Props) => {
   const [featuredList, setFeaturedList] = useState([]);
-  const [libraryList, setLibraryList] = useState<ExerciseApiType[] | null>(
-    null
-  );
-  const [customList, setCustomList] = useState<ExerciseApiType[] | null>(null);
+  const [libraryList, setLibraryList] = useState<ExerciseType[] | null>(null);
+  const [customList, setCustomList] = useState<ExerciseType[] | null>(null);
 
   const router = useRouter();
 
-  // fetch a pool of global+mine, then filter down to tag === "featured"
-  const fetchFeatureExercises = async () => {
-    const res = await api("/exercises?scope=all&limit=20"); // uses your existing route
-    const data = await res.json(); // { items: [...] }
-    console.log("data from response: ", data);
-    setLibraryList(data.items);
-    const featuredPool = (data.items ?? []).filter((w: any) =>
-      (w.tags ?? []).includes("featured")
-    );
+  const { isLoading: isMyExercisesLoading, data: myExercises } = useQuery({
+    queryKey: ["myExercises"],
+    queryFn: async () => {
+      const res = await fetchMine();
+      return res.items;
+    },
+  });
 
-    // shuffle then take 5
-    for (let i = featuredPool.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [featuredPool[i], featuredPool[j]] = [featuredPool[j], featuredPool[i]];
-    }
-    const featuredFive = featuredPool.slice(0, 5);
-    //console.log(featuredFive);
-    setFeaturedList(featuredFive);
-  };
-
-  const fetchMyExer = async () => {
-    const myExerciseList = await fetchMine();
-    console.log(myExerciseList);
-    setCustomList(myExerciseList.items);
-  };
+  const { isLoading: isLibraryExercisesLoading, data: libraryExercises } =
+    useQuery({
+      queryKey: ["exercisesLibrary"],
+      queryFn: async () => {
+        const res = await api("/exercises?scope=all&limit=50");
+        const resJson = await res.json();
+        return resJson.items;
+      },
+    });
 
   useEffect(() => {
-    fetchFeatureExercises();
-    fetchMyExer();
-  }, []);
+    if (libraryExercises) {
+      const featuredPool = (libraryExercises ?? []).filter((e: ExerciseType) =>
+        (e.tags ?? []).includes("featured")
+      );
+
+      // shuffle then take 5
+      for (let i = featuredPool.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [featuredPool[i], featuredPool[j]] = [featuredPool[j], featuredPool[i]];
+      }
+      const featuredFive = featuredPool.slice(0, 5);
+      //console.log(featuredFive);
+      setFeaturedList(featuredFive);
+    }
+  }, [libraryExercises]);
+
   return (
     <div className="w-full h-full flex flex-col items-center">
       <FeaturedExercisesSection featuredList={featuredList} />
@@ -87,11 +83,11 @@ const page = (props: Props) => {
         <ActionButton name="Modify Existing" Icon={Edit} />
       </div>
       <MainSearchInput />
-      <div className="w-full flex flex-col gap-4 items-start">
-        <h2 className="font-medium px-4">Custom Made</h2>
-        <div className="px-4 pb-4 w-full grid grid-cols-1 min-[375px]:grid-cols-2 md:grid-cols-3 gap-4">
-          {customList &&
-            customList.map((item, index) => (
+      {myExercises && myExercises.length > 0 && (
+        <div className="w-full flex flex-col gap-4 items-start">
+          <h2 className="font-medium px-4">Custom Made</h2>
+          <div className="px-4 pb-4 w-full grid grid-cols-1 min-[375px]:grid-cols-2 md:grid-cols-3 gap-4">
+            {myExercises.map((item: ExerciseType, index: number) => (
               <SmallBrowseCards
                 key={index}
                 title={item.title}
@@ -101,13 +97,18 @@ const page = (props: Props) => {
                 route={`/exercisepreview/${item.id}`}
               />
             ))}
+          </div>
         </div>
-      </div>
+      )}
+
       <div className="w-full flex flex-col gap-4 items-start">
         <h2 className="font-medium px-4">Library</h2>
         <div className="px-4 pb-4 w-full grid grid-cols-1 min-[375px]:grid-cols-2 md:grid-cols-3 gap-4">
-          {libraryList &&
-            libraryList.map((item, index) => (
+          {isLibraryExercisesLoading ? (
+            <>Loading...</>
+          ) : (
+            libraryExercises &&
+            libraryExercises.map((item: ExerciseType, index: number) => (
               <SmallBrowseCards
                 key={index}
                 title={item.title}
@@ -116,7 +117,8 @@ const page = (props: Props) => {
                 action={true}
                 route={`/exercisepreview/${item.id}`}
               />
-            ))}
+            ))
+          )}
         </div>
       </div>
     </div>

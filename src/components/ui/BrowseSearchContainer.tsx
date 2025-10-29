@@ -4,46 +4,47 @@ import MainSearchInput from "./MainSearchInput";
 import SmallBrowseCards from "../workouts/SmallBrowseCards";
 import { WorkoutBrowseDefault } from "@/lib/workouts/WorkoutsLists";
 import { api } from "@/lib/api";
-import { WorkoutApiType } from "@/types/workout";
+import { WorkoutType } from "@/types/workout";
+import { useQuery } from "@tanstack/react-query";
 
 type Props = {};
 
 const BrowseSearchContainer = (props: Props) => {
   const { theme, setTheme } = useTheme();
   const [isLight, setIsLight] = useState(theme === "light");
-  const [customList, setCustomList] = useState<WorkoutApiType[]>([]);
 
   useEffect(() => {
     setIsLight(theme === "light");
   }, [theme]);
 
-  useEffect(() => {
-    console.log("On render, custom workouts: ");
-    fetchCustomWorkouts();
-  }, []);
-
-  const fetchCustomWorkouts = async () => {
-    const res = await api("/workouts?scope=mine&limit=10");
-    const myWorkoutList = await res.json();
-    console.log("My custom workout List: ", myWorkoutList);
-    setCustomList(myWorkoutList.items);
-  };
+  const { isLoading, data: customWorkouts } = useQuery({
+    queryKey: ["workouts", "custom-mine"],
+    queryFn: async () => {
+      const res = await api("/workouts?scope=mine&limit=10");
+      const data = await res.json();
+      return data.items ?? [];
+    },
+  });
 
   return (
     <div className="w-full h-full flex flex-col gap-0">
-      {customList.length > 0 && (
+      {customWorkouts && customWorkouts.length > 0 && (
         <div className="px-4 pt-4 w-full flex flex-col items-start gap-2">
           <h2 className="font-medium ">Custom Made</h2>
           <div className=" w-full flex items-center gap-4 overflow-x-scroll no-scrollbar h-[150px] min-[375px]:h-[180px] md:h-[200px]">
-            {customList.map((item, index) => (
-              <SmallBrowseCards
-                key={index}
-                title={item.name}
-                imgUrl={item.image}
-                action={true}
-                route={`/startworkout/${item.id}`}
-              />
-            ))}
+            {isLoading
+              ? Array(4)
+                  .fill(0)
+                  .map((_, index) => <>Loading...</>)
+              : customWorkouts.map((item: WorkoutType, index: number) => (
+                  <SmallBrowseCards
+                    key={index}
+                    title={item.name}
+                    imgUrl={item.image}
+                    action={true}
+                    route={`/startworkout/${item.id}`}
+                  />
+                ))}
           </div>
         </div>
       )}
