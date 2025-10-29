@@ -3,7 +3,7 @@ import Alert from "@/components/ui/Alert";
 import { useAuth } from "@/context/AuthContext";
 import { useDialog } from "@/context/DialogContext";
 import { http } from "@/lib/api";
-import { ExerciseApiType } from "@/types/workout";
+import { ExerciseType } from "@/types/workout";
 import { stringList } from "aws-sdk/clients/datapipeline";
 import { randomUUID } from "crypto";
 import { ArrowLeft, ArrowRight, CheckCheck, X } from "lucide-react";

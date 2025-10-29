@@ -1,7 +1,7 @@
 "use client";
 import { useDialog } from "@/context/DialogContext";
 import { useLogGlobal } from "@/context/LogContext";
-import { ExerciseApiType, ExerciseType, WorkoutApiType } from "@/types/workout";
+import { ExerciseType, WorkoutType } from "@/types/workout";
 import { MoreHorizontal, Star, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import React, { useEffect, useMemo, useState } from "react";
@@ -53,7 +53,7 @@ function Modal({
 
 interface ExerciseLogLiProps {
   complete: boolean;
-  exerciseObject: ExerciseApiType | ExerciseType;
+  exerciseObject: ExerciseType;
 }
 
 const ExerciseLogLi: React.FC<ExerciseLogLiProps> = ({
@@ -67,9 +67,7 @@ const ExerciseLogLi: React.FC<ExerciseLogLiProps> = ({
   const { setCurrentWorkoutLog, currentWorkoutLog } = useLogGlobal();
   //console.log("Current Log in Li: ", currentWorkoutLog);
   //console.log("Exercise Object: ", exerciseObject);
-  const [exercise, setExercise] = useState<
-    ExerciseApiType | ExerciseType | null
-  >(exerciseObject);
+  const [exercise, setExercise] = useState<ExerciseType | null>(exerciseObject);
 
   useEffect(() => {
     if (isLight !== (theme === "light")) {
@@ -85,17 +83,11 @@ const ExerciseLogLi: React.FC<ExerciseLogLiProps> = ({
         ...currentWorkoutLog.workoutDetails,
         exercisesCompleted: isComplete
           ? currentWorkoutLog?.workoutDetails.exercisesCompleted.filter(
-              (id) =>
-                id !==
-                ("id" in exerciseObject
-                  ? exerciseObject.id
-                  : exerciseObject.exerciseId)
+              (id) => id !== exerciseObject.id
             )
           : [
               ...currentWorkoutLog?.workoutDetails.exercisesCompleted,
-              "id" in exerciseObject
-                ? exerciseObject.id
-                : exerciseObject.exerciseId,
+              exerciseObject.id,
             ],
       },
     });
@@ -116,11 +108,7 @@ const ExerciseLogLi: React.FC<ExerciseLogLiProps> = ({
       const fetchExercise = async () => {
         try {
           const fullExercise = await http.get(
-            `/exercises/${
-              "id" in exerciseObject
-                ? exerciseObject.id
-                : exerciseObject.exerciseId
-            }`
+            `/exercises/${exerciseObject.id}`
           );
           //console.log("Full Exercise: ", fullExercise);
           setExercise(fullExercise);
@@ -141,9 +129,7 @@ const ExerciseLogLi: React.FC<ExerciseLogLiProps> = ({
       <div className="flex items-center gap-4 h-full">
         <div className="aspect-square rounded-sm bg-neutral-200 h-full w-auto"></div>
         <div className="flex flex-col items-start">
-          <p className="text-sm sm:text-base">
-            {exercise && ("title" in exercise ? exercise.title : exercise.name)}
-          </p>
+          <p className="text-sm sm:text-base">{exercise && exercise.title}</p>
           <p
             className={`p-1 px-2 tracking-wider text-[10px] sm:text-xs rounded-sm border-neutral-200 border ${
               isComplete
@@ -534,20 +520,20 @@ const CustomLog: React.FC<PostWorkoutLogProps> = ({ isDone }) => {
 
   const { user } = useAuth();
 
-  const [selectedWorkout, setSelectedWorkout] = useState<null | WorkoutApiType>(
+  const [selectedWorkout, setSelectedWorkout] = useState<null | WorkoutType>(
     null
   );
 
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [library, setLibrary] = useState<WorkoutApiType[]>([]);
+  const [library, setLibrary] = useState<WorkoutType[]>([]);
   const [libLoaded, setLibLoaded] = useState(false);
   const [q, setQ] = useState("");
 
   const [exercisePickerOpen, setExercisePickerOpen] = useState(false);
-  const [exerciseLibrary, setExerciseLibrary] = useState<ExerciseApiType[]>([]);
+  const [exerciseLibrary, setExerciseLibrary] = useState<ExerciseType[]>([]);
   const [exerciseLibLoaded, setExerciseLibLoaded] = useState(false);
   const [exerciseQ, setExerciseQ] = useState("");
-  const [selectedExercises, setSelectedExercises] = useState<ExerciseApiType[]>(
+  const [selectedExercises, setSelectedExercises] = useState<ExerciseType[]>(
     []
   );
 
@@ -564,7 +550,7 @@ const CustomLog: React.FC<PostWorkoutLogProps> = ({ isDone }) => {
     try {
       console.log("Entered load exercise library.");
       const data = await http.get<{
-        items: ExerciseApiType[];
+        items: ExerciseType[];
         nextCursor: string | null;
       }>("/exercises?scope=all&limit=50");
       // console.log("Data in load library: ", data);
@@ -575,7 +561,7 @@ const CustomLog: React.FC<PostWorkoutLogProps> = ({ isDone }) => {
     }
   };
 
-  const quickAddExercise = (exercise: ExerciseApiType) => {
+  const quickAddExercise = (exercise: ExerciseType) => {
     console.log(exercise);
     if (exerciseLimitReached) return;
     setSelectedExercises([...selectedExercises, exercise]);
@@ -611,7 +597,7 @@ const CustomLog: React.FC<PostWorkoutLogProps> = ({ isDone }) => {
     try {
       console.log("Entered load library.");
       const data = await http.get<{
-        items: WorkoutApiType[];
+        items: WorkoutType[];
         nextCursor: string | null;
       }>("/workouts?scope=all&limit=50");
       // console.log("Data in load library: ", data);
@@ -628,7 +614,7 @@ const CustomLog: React.FC<PostWorkoutLogProps> = ({ isDone }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pickerOpen]);
 
-  const quickAdd = (ex: WorkoutApiType) => {
+  const quickAdd = (ex: WorkoutType) => {
     console.log(ex);
     if (limitReached) return;
     setSelectedWorkout(ex);
@@ -871,11 +857,19 @@ const CustomLog: React.FC<PostWorkoutLogProps> = ({ isDone }) => {
   const handleAddExercise = () => {
     if (!selectedWorkout) return;
     const newExercise: ExerciseType = {
-      exerciseId: "new-" + Date.now().toString(),
-      name: newExerciseName,
-      sets: newExerciseSets,
-      reps: newExerciseReps,
-      restSecs: 0,
+      id: "new-" + Date.now().toString(),
+      title: newExerciseName,
+      author: user?.name || "unknown",
+      type: "strength",
+      image: "",
+      tags: ["custom"],
+      details: {
+        sets: newExerciseSets,
+        reps: newExerciseReps,
+        restSecs: 0,
+        equipment: [],
+      },
+      description: "Custom Exercise",
     };
     // Add to currentWorkoutLog
     if (currentWorkoutLog) {
@@ -890,7 +884,7 @@ const CustomLog: React.FC<PostWorkoutLogProps> = ({ isDone }) => {
           exercisesCompleted: newExerciseCompleted
             ? [
                 ...currentWorkoutLog.workoutDetails.exercisesCompleted,
-                newExercise.exerciseId,
+                newExercise.id,
               ]
             : currentWorkoutLog.workoutDetails.exercisesCompleted,
         },
@@ -1420,10 +1414,7 @@ const WorkoutLogModal: React.FC<Props> = () => {
       setCurrentWorkoutLog(null); // Clear the log after saving
       setLogOpen(false);
     }
-    // else do nothing, stay in log
   };
-
-  //const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   return (
     <div

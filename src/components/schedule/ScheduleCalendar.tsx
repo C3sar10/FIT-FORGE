@@ -375,7 +375,6 @@ const ScheduleCalendar = (props: Props) => {
       });
     }
   }, [date, miniCalendar]);
-  // ...existing code...
 
   useEffect(() => {
     setIsLight(theme === "light");
@@ -404,19 +403,6 @@ const ScheduleCalendar = (props: Props) => {
         variant={toast.variant}
         onClose={() => setToast({ open: false, message: "" })}
       />
-      {process.env.NODE_ENV !== "production" && (
-        <div className="max-w-[500px] mx-auto p-2 mb-2 text-xs text-neutral-600">
-          <div>
-            Debug: events URL: {process.env.NEXT_PUBLIC_API_URL}
-            /events?scope=all&amp;limit=100
-          </div>
-          {lastFetchError && (
-            <div className="text-red-600">
-              Last fetch error: {lastFetchError}
-            </div>
-          )}
-        </div>
-      )}
       <div
         className={`w-full sticky z-10 pb-6 top-4
              mx-auto p-4 border border-neutral-200 ${
