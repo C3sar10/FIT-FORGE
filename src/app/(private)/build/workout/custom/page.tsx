@@ -3,20 +3,10 @@ import Alert from "@/components/ui/Alert";
 import { useAuth } from "@/context/AuthContext";
 import { useDialog } from "@/context/DialogContext";
 import { http } from "@/lib/api";
+import { ExerciseType } from "@/types/workout";
 import { ArrowLeft, ArrowRight, CheckCheck, Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
-
-/** Types coming back from /exercises list */
-type ExerciseApiType = {
-  id: string;
-  author: string;
-  title: string;
-  type: string;
-  tags: string[];
-  description?: string;
-  image?: string | null;
-};
 
 type Props = {};
 
@@ -95,11 +85,11 @@ function WorkoutFormPages({
 
   // page 2: select exercises (limit 12)
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [library, setLibrary] = useState<ExerciseApiType[]>([]);
+  const [library, setLibrary] = useState<ExerciseType[]>([]);
   const [libLoaded, setLibLoaded] = useState(false);
   const [q, setQ] = useState("");
 
-  const [selected, setSelected] = useState<ExerciseApiType[]>([]); // up to 12
+  const [selected, setSelected] = useState<ExerciseType[]>([]); // up to 12
 
   const filtered = useMemo(() => {
     const qq = q.trim().toLowerCase();
@@ -113,7 +103,7 @@ function WorkoutFormPages({
     try {
       console.log("Entered load library.");
       const data = await http.get<{
-        items: ExerciseApiType[];
+        items: ExerciseType[];
         nextCursor: string | null;
       }>("/exercises?scope=all&limit=50");
       console.log("Data in load library: ", data);
@@ -129,7 +119,7 @@ function WorkoutFormPages({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pickerOpen]);
 
-  const quickAdd = (ex: ExerciseApiType) => {
+  const quickAdd = (ex: ExerciseType) => {
     if (limitReached) return;
     if (selected.find((s) => s.id === ex.id)) return;
     setSelected((prev) => [...prev, ex]);
