@@ -1,10 +1,5 @@
 "use client";
-import {
-  ExerciseApiType,
-  ExerciseType,
-  WorkoutApiType,
-  WorkoutType,
-} from "@/types/workout";
+import { ExerciseType, WorkoutType } from "@/types/workout";
 import {
   ChevronDown,
   ChevronRightIcon,
@@ -14,7 +9,6 @@ import {
 import React, { useEffect, useState } from "react";
 import { useLogGlobal } from "@/context/LogContext";
 import { AuthAPI } from "@/lib/api";
-import ExerciseLi from "../workouts/ExerciseLi";
 import { useWorkoutGlobal } from "@/context/WorkoutContext";
 import { api } from "@/lib/api";
 import { TimerControls, TimerDisplay } from "./TimerDisplay";
@@ -54,7 +48,7 @@ const LiveExerciseLi: React.FC<ExerciseLiProps> = ({
           ...currentWorkoutLog.workoutDetails,
           exercisesCompleted: [
             ...currentWorkoutLog.workoutDetails.exercisesCompleted,
-            exerciseObj.exerciseId,
+            exerciseObj.id,
           ],
         },
       });
@@ -65,7 +59,7 @@ const LiveExerciseLi: React.FC<ExerciseLiProps> = ({
           ...currentWorkoutLog.workoutDetails,
           exercisesCompleted:
             currentWorkoutLog.workoutDetails.exercisesCompleted.filter(
-              (id) => id !== exerciseObj.exerciseId
+              (id) => id !== exerciseObj.id
             ),
         },
       });
@@ -82,9 +76,7 @@ const LiveExerciseLi: React.FC<ExerciseLiProps> = ({
           className="size-6 mr-4 bg-transparent border-white"
         />
         <div
-          onClick={() =>
-            router.push(`/exercisepreview/${exerciseObj.exerciseId}`)
-          }
+          onClick={() => router.push(`/exercisepreview/${exerciseObj.id}`)}
           className="flex flex-col items-start"
         >
           <h2
@@ -92,23 +84,21 @@ const LiveExerciseLi: React.FC<ExerciseLiProps> = ({
               isChecked ? "line-through text-neutral-400" : ""
             } text-base font-medium`}
           >
-            {exerciseObj.name}
+            {exerciseObj.title}
           </h2>
           <div
             className={`${
               isChecked ? "line-through text-neutral-500" : ""
             } flex items-center gap-1 text-sm`}
           >
-            <p>Sets {exerciseObj.sets.toLocaleString()}</p>
+            <p>Sets {exerciseObj.details.sets.toLocaleString()}</p>
             <p>|</p>
-            <p>Reps {exerciseObj.reps}</p>
+            <p>Reps {exerciseObj.details.reps}</p>
           </div>
         </div>
       </div>
       <ChevronRightIcon
-        onClick={() =>
-          router.push(`/exercisepreview/${exerciseObj.exerciseId}`)
-        }
+        onClick={() => router.push(`/exercisepreview/${exerciseObj.id}`)}
         className="justify-self-end justify-items-end size-4"
       />
     </li>
@@ -127,8 +117,7 @@ const WorkoutPlayer = (props: Props) => {
   const { setCurrentWorkoutLog, setIsPostWorkoutLog, currentWorkoutLog } =
     useLogGlobal();
   const [isVisible, setIsVisible] = useState(true);
-  const [isAnimating, setIsAnimating] = useState(false);
-  const [workoutData, setWorkoutData] = useState<WorkoutApiType | null>(null);
+  const [workoutData, setWorkoutData] = useState<WorkoutType | null>(null);
   const [playerOpen, setPlayerOpen] = useState(false);
   const queryClient = useQueryClient(); // To access cache
   const [exerciseList, setExerciseList] = useState<ExerciseType[]>([]);
@@ -140,7 +129,7 @@ const WorkoutPlayer = (props: Props) => {
     data: workout,
     isLoading: workoutLoading,
     error,
-  } = useQuery<WorkoutApiType, Error>({
+  } = useQuery<WorkoutType, Error>({
     queryKey: ["workout", currWorkoutId],
     queryFn: async () => {
       if (!currWorkoutId) throw new Error("No workout ID");
@@ -160,20 +149,25 @@ const WorkoutPlayer = (props: Props) => {
       );
       const uniqueIds = [...new Set(flatIds)];
       const cachedExercises = uniqueIds
-        .map((id) =>
-          queryClient.getQueryData<ExerciseApiType>(["exercise", id])
-        )
-        .filter((e): e is ExerciseApiType => !!e); // Type guard
+        .map((id) => queryClient.getQueryData<ExerciseType>(["exercise", id]))
+        .filter((e): e is ExerciseType => !!e); // Type guard
       if (cachedExercises.length === uniqueIds.length) {
         // All cached - map to list
         const exerciseMap = new Map(cachedExercises.map((e) => [e.id, e]));
         const fullList = flatIds.map((id) => ({
-          exerciseId: id,
-          name: exerciseMap.get(id)?.title ?? "",
-          sets: exerciseMap.get(id)?.details.sets ?? 0,
-          reps: exerciseMap.get(id)?.details.reps ?? "",
-          restSecs: exerciseMap.get(id)?.details.restSecs ?? 0,
+          id,
+          title: exerciseMap.get(id)?.title ?? "",
+          tags: exerciseMap.get(id)?.tags ?? [],
           image: exerciseMap.get(id)?.image ?? "",
+          type: exerciseMap.get(id)?.type ?? "",
+          author: exerciseMap.get(id)?.author ?? "",
+          description: exerciseMap.get(id)?.description ?? "",
+          details: exerciseMap.get(id)?.details ?? {
+            sets: exerciseMap.get(id)?.details.sets ?? 0,
+            reps: exerciseMap.get(id)?.details.reps ?? "N/A",
+            restSecs: exerciseMap.get(id)?.details.restSecs ?? 0,
+            equipment: exerciseMap.get(id)?.details.equipment ?? [],
+          },
         }));
         setExerciseList(fullList);
         setIsLoadingExercises(false);
@@ -187,7 +181,7 @@ const WorkoutPlayer = (props: Props) => {
             const newExercises = await Promise.all(
               missingIds.map(async (id) => {
                 try {
-                  const data = await queryClient.fetchQuery<ExerciseApiType>({
+                  const data = await queryClient.fetchQuery<ExerciseType>({
                     queryKey: ["exercise", id],
                     queryFn: async () => {
                       const res = await api(`/exercises/${id}`);
@@ -206,16 +200,23 @@ const WorkoutPlayer = (props: Props) => {
             // Combine cached and new exercises
             const allExercises = [
               ...cachedExercises,
-              ...newExercises.filter((e): e is ExerciseApiType => e !== null),
+              ...newExercises.filter((e): e is ExerciseType => e !== null),
             ];
             const exerciseMap = new Map(allExercises.map((e) => [e.id, e]));
             const fullList = flatIds.map((id) => ({
-              exerciseId: id,
-              name: exerciseMap.get(id)?.title ?? "Unknown Exercise",
-              sets: exerciseMap.get(id)?.details.sets ?? 0,
-              reps: exerciseMap.get(id)?.details.reps ?? "N/A",
-              restSecs: exerciseMap.get(id)?.details.restSecs ?? 0,
+              id,
+              title: exerciseMap.get(id)?.title ?? "",
+              tags: exerciseMap.get(id)?.tags ?? [],
               image: exerciseMap.get(id)?.image ?? "",
+              type: exerciseMap.get(id)?.type ?? "",
+              author: exerciseMap.get(id)?.author ?? "",
+              description: exerciseMap.get(id)?.description ?? "",
+              details: exerciseMap.get(id)?.details ?? {
+                sets: exerciseMap.get(id)?.details.sets ?? 0,
+                reps: exerciseMap.get(id)?.details.reps ?? "N/A",
+                restSecs: exerciseMap.get(id)?.details.restSecs ?? 0,
+                equipment: exerciseMap.get(id)?.details.equipment ?? [],
+              },
             }));
             setExerciseList(fullList);
           } catch (err) {
@@ -364,7 +365,7 @@ const WorkoutPlayer = (props: Props) => {
               {exerciseList.map((exercise) => (
                 <LiveExerciseLi
                   exerciseObj={exercise}
-                  key={exercise.exerciseId}
+                  key={exercise.id}
                   currentWorkoutLog={currentWorkoutLog}
                   setCurrentWorkoutLog={setCurrentWorkoutLog}
                 />
