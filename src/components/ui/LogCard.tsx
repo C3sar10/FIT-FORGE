@@ -5,10 +5,20 @@ interface LogCardProps {
   title: string;
   description: string;
   img?: string;
+  action?: () => void;
 }
 
-const LogCard: React.FC<LogCardProps> = ({ icon, title, description, img }) => (
-  <div className="w-full h-[120px] flex flex-row justify-between items-center rounded-md border border-neutral-200 overflow-hidden">
+const LogCard: React.FC<LogCardProps> = ({
+  icon,
+  title,
+  description,
+  img,
+  action,
+}) => (
+  <div
+    onClick={action ? action : () => {}}
+    className="w-full h-[120px] flex flex-row justify-between items-center rounded-md border border-neutral-200 overflow-hidden"
+  >
     <div className="h-full w-full flex flex-row items-center gap-4">
       <div className="aspect-square h-full w-auto">
         <img src={img} alt={title} className="h-full w-full object-cover" />

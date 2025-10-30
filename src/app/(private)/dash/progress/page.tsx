@@ -30,10 +30,13 @@ import { useTheme } from "next-themes";
 import { LogAPI } from "@/lib/api";
 import { WorkoutLogType } from "@/types/progress";
 import { set } from "mongoose";
+import { useRouter } from "next/navigation";
 
 type Props = {};
 
 const page = (props: Props) => {
+  const router = useRouter();
+
   const { theme, setTheme, resolvedTheme } = useTheme();
   const [isLight, setIsLight] = useState(theme === "light");
   const [userLogData, setUserLogData] = useState<WorkoutLogType[]>([]);
@@ -138,7 +141,10 @@ const page = (props: Props) => {
 
     userLogData.forEach((item) => {
       // createdOn should be a timestamp string
-      const d = new Date(item.createdOn);
+      const d = item.workoutDate
+        ? new Date(item.workoutDate)
+        : new Date(item.createdOn);
+
       const itemYear = d.getFullYear();
       const itemMonth = d.getMonth();
       const itemDate = d.getDate();
@@ -329,7 +335,7 @@ const page = (props: Props) => {
             {viewMode === "month" ? (
               <BarChart
                 data={monthData}
-                margin={{ top: 0, right: 20, bottom: 40, left: 20 }}
+                margin={{ top: 0, right: 8, bottom: 8, left: 0 }}
               >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis
@@ -338,20 +344,8 @@ const page = (props: Props) => {
                     parseInt(value) % 2 === 0 ? value : ""
                   }
                   interval={0}
-                  label={{
-                    value: monthName2,
-                    position: "insideBottom",
-                    offset: -20,
-                  }}
                 />
-                <YAxis
-                  label={{
-                    value: "Training Time (Minutes)",
-                    angle: -90,
-                    position: "insideLeft",
-                    dy: 80,
-                  }}
-                />
+                <YAxis />
                 <Tooltip />
                 <Bar
                   dataKey="value"
@@ -363,27 +357,11 @@ const page = (props: Props) => {
             ) : (
               <BarChart
                 data={yearData}
-                margin={{ top: 0, right: 20, bottom: 40, left: 20 }}
+                margin={{ top: 0, right: 8, bottom: 8, left: 0 }}
               >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis
-                  dataKey="name"
-                  label={{
-                    value: year,
-                    position: "insideBottom",
-                    offset: -20,
-                    style: { fontSize: 16 },
-                  }}
-                />
-                <YAxis
-                  label={{
-                    value: "Training Time (Minutes)",
-                    angle: -90,
-                    position: "insideLeft",
-                    dy: 80,
-                    style: { fontSize: 16 },
-                  }}
-                />
+                <XAxis dataKey="name" />
+                <YAxis />
                 <Tooltip />
                 <Bar dataKey="value" fill="#65A30D" radius={[6, 6, 0, 0]} />
               </BarChart>
@@ -456,6 +434,9 @@ const page = (props: Props) => {
           title="View All Logs"
           description="Take a look at your log history"
           img="/browse-web/pull-day-default.jpg"
+          action={() => {
+            router.push("/dash/progress/logs/workoutLogs");
+          }}
         />
         <LogCard
           icon={<ArrowRight size={28} />}

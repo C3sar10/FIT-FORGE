@@ -1,10 +1,3 @@
-export interface WorkoutItem {
-  name: String;
-  sets: number;
-  reps: String;
-  restSecs: number;
-}
-
 export interface WorkoutType {
   name: string;
   tags: string[];
@@ -18,7 +11,7 @@ export interface WorkoutType {
   blocks: [
     {
       title: string;
-      items: WorkoutItem[];
+      items: WorkoutBlockItem[];
     }
   ];
 }

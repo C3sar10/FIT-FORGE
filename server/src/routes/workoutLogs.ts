@@ -75,8 +75,14 @@ router.get("/:id", async (req, res) => {
     createdOn: log.createdOn.toISOString(),
     lastUpdated: log.lastUpdated.toISOString(),
     description: log.description,
+    workoutDate: log.workoutDate ? log.workoutDate.toISOString() : null,
     workoutDetails: {
       ...log.workoutDetails,
+      workoutTitle: log.workoutDetails?.workoutTitle,
+      duration: log.workoutDetails?.duration,
+      exerciseList: log.workoutDetails?.exerciseList,
+      exercisesCompleted: log.workoutDetails?.exercisesCompleted,
+      type: log.workoutDetails?.type,
       workoutTimestamp: log.workoutDetails?.workoutTimestamp.toISOString(),
       workoutId: String(log.workoutDetails?.workoutId),
     },
@@ -93,11 +99,16 @@ const CreateLogSchema = z.object({
   workoutDetails: z.object({
     workoutTimestamp: z.string().datetime(),
     workoutTitle: z.string().min(1),
-    workoutId: z.string(),
+    workoutId: z.string().optional(),
     duration: z.union([z.string(), z.number()]),
     exerciseList: z.array(
       z.object({
         /* Match structure */
+        name: z.string(),
+        exerciseId: z.string(),
+        sets: z.number().int().min(1),
+        reps: z.string(),
+        restSecs: z.number().int().min(0),
       })
     ),
     exercisesCompleted: z.array(z.string()),
@@ -120,8 +131,12 @@ router.post("/", async (req, res) => {
     description: dto.description,
     workoutDetails: {
       ...dto.workoutDetails,
+      workoutTitle: dto.workoutDetails?.workoutTitle,
+      duration: dto.workoutDetails?.duration,
+      exerciseList: dto.workoutDetails?.exerciseList,
+      exercisesCompleted: dto.workoutDetails?.exercisesCompleted,
+      type: dto.workoutDetails?.type,
       workoutTimestamp: new Date(dto.workoutDetails.workoutTimestamp), // Convert string to Date
-      workoutId: new Types.ObjectId(dto.workoutDetails.workoutId), // Ensure ObjectId
     },
     workoutDate: dto.workoutDate ? new Date(dto.workoutDate) : undefined,
     rating: dto.rating,
@@ -143,7 +158,6 @@ router.post("/", async (req, res) => {
     workoutDetails: {
       ...out.workoutDetails,
       workoutTimestamp: out.workoutDetails?.workoutTimestamp.toISOString(), // Back to string for client
-      workoutId: String(out.workoutDetails?.workoutId),
     },
     rating: out.rating,
     intensity: out.intensity,

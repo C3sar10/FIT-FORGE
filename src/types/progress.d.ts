@@ -1,4 +1,4 @@
-import { ExerciseType } from "./workout";
+import { ExerciseType, WorkoutBlockItem } from "./workout";
 
 export interface WorkoutLogType {
   logId: string;
@@ -12,9 +12,9 @@ export interface WorkoutLogType {
   workoutDetails: {
     workoutTimestamp: string;
     workoutTitle: string;
-    workoutId: string;
+    workoutId?: string;
     duration: string | number;
-    exerciseList: ExerciseType[]; //list of exercises in the workout
+    exerciseList: WorkoutBlockItem[]; //list of exercises in the workout
     exercisesCompleted: string[]; //ids of exercises completed in exerciseList
     type: string;
   };

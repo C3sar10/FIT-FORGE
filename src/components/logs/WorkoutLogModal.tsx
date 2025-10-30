@@ -1,13 +1,14 @@
 "use client";
 import { useDialog } from "@/context/DialogContext";
 import { useLogGlobal } from "@/context/LogContext";
-import { ExerciseType, WorkoutType } from "@/types/workout";
+import { ExerciseType, WorkoutBlockItem, WorkoutType } from "@/types/workout";
 import { MoreHorizontal, Star, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import React, { useEffect, useMemo, useState } from "react";
 import { http, LogAPI } from "@/lib/api";
 import Alert from "../ui/Alert";
 import { useAuth } from "@/context/AuthContext";
+import { WorkoutLogType } from "@/types/progress";
 
 /** ---------- Local, tiny modal ---------- */
 function Modal({
@@ -53,7 +54,7 @@ function Modal({
 
 interface ExerciseLogLiProps {
   complete: boolean;
-  exerciseObject: ExerciseType;
+  exerciseObject: WorkoutBlockItem;
 }
 
 const ExerciseLogLi: React.FC<ExerciseLogLiProps> = ({
@@ -67,7 +68,10 @@ const ExerciseLogLi: React.FC<ExerciseLogLiProps> = ({
   const { setCurrentWorkoutLog, currentWorkoutLog } = useLogGlobal();
   //console.log("Current Log in Li: ", currentWorkoutLog);
   //console.log("Exercise Object: ", exerciseObject);
-  const [exercise, setExercise] = useState<ExerciseType | null>(exerciseObject);
+  const [exercise, setExercise] = useState<WorkoutBlockItem | null>(
+    exerciseObject
+  );
+  const [fullExercise, setFullExercise] = useState<ExerciseType | null>(null);
 
   useEffect(() => {
     if (isLight !== (theme === "light")) {
@@ -83,11 +87,11 @@ const ExerciseLogLi: React.FC<ExerciseLogLiProps> = ({
         ...currentWorkoutLog.workoutDetails,
         exercisesCompleted: isComplete
           ? currentWorkoutLog?.workoutDetails.exercisesCompleted.filter(
-              (id) => id !== exerciseObject.id
+              (id) => id !== exerciseObject.exerciseId
             )
           : [
               ...currentWorkoutLog?.workoutDetails.exercisesCompleted,
-              exerciseObject.id,
+              exerciseObject.exerciseId,
             ],
       },
     });
@@ -100,24 +104,18 @@ const ExerciseLogLi: React.FC<ExerciseLogLiProps> = ({
   }, [complete]);
 
   useEffect(() => {
-    if (
-      !exerciseObject.hasOwnProperty("title") ||
-      !exerciseObject.hasOwnProperty("name")
-    ) {
-      // fetch full exercise from api if only id is present
-      const fetchExercise = async () => {
-        try {
-          const fullExercise = await http.get(
-            `/exercises/${exerciseObject.id}`
-          );
-          //console.log("Full Exercise: ", fullExercise);
-          setExercise(fullExercise);
-        } catch (error) {
-          console.error("Error fetching exercise: ", error);
-        }
-      };
-      fetchExercise();
-    }
+    const fetchExercise = async () => {
+      try {
+        const fullExercise = await http.get(
+          `/exercises/${exerciseObject.exerciseId}`
+        );
+        //console.log("Full Exercise: ", fullExercise);
+        setFullExercise(fullExercise);
+      } catch (error) {
+        console.error("Error fetching exercise: ", error);
+      }
+    };
+    fetchExercise();
   }, []);
 
   return (
@@ -129,7 +127,7 @@ const ExerciseLogLi: React.FC<ExerciseLogLiProps> = ({
       <div className="flex items-center gap-4 h-full">
         <div className="aspect-square rounded-sm bg-neutral-200 h-full w-auto"></div>
         <div className="flex flex-col items-start">
-          <p className="text-sm sm:text-base">{exercise && exercise.title}</p>
+          <p className="text-sm sm:text-base">{fullExercise?.title}</p>
           <p
             className={`p-1 px-2 tracking-wider text-[10px] sm:text-xs rounded-sm border-neutral-200 border ${
               isComplete
@@ -361,14 +359,14 @@ const PostWorkoutLog: React.FC<PostWorkoutLogProps> = ({ isDone }) => {
                     //console.log("Exercise List: ", exercise.id);
                     isComplete =
                       currentWorkoutLog.workoutDetails.exercisesCompleted.includes(
-                        exercise.id
+                        exercise.exerciseId
                       );
                     //console.log("Exer is complete: ", isComplete);
                   } else {
                     //console.log("Exercise List: ", exercise.exerciseId);
                     isComplete =
                       currentWorkoutLog.workoutDetails.exercisesCompleted.includes(
-                        exercise.id
+                        exercise.exerciseId
                       );
                     //console.log("Exer is complete: ", isComplete);
                   }
@@ -520,6 +518,8 @@ const CustomLog: React.FC<PostWorkoutLogProps> = ({ isDone }) => {
 
   const { user } = useAuth();
 
+  const [workoutDate, setWorkoutDate] = useState<string>("");
+
   const [selectedWorkout, setSelectedWorkout] = useState<null | WorkoutType>(
     null
   );
@@ -571,7 +571,13 @@ const CustomLog: React.FC<PostWorkoutLogProps> = ({ isDone }) => {
         ...currentWorkoutLog!.workoutDetails,
         exerciseList: [
           ...currentWorkoutLog!.workoutDetails.exerciseList,
-          exercise,
+          {
+            exerciseId: exercise.id,
+            name: exercise.title,
+            sets: exercise.details.sets,
+            reps: exercise.details.reps,
+            restSecs: exercise.details.restSecs,
+          },
         ],
       },
     });
@@ -625,7 +631,7 @@ const CustomLog: React.FC<PostWorkoutLogProps> = ({ isDone }) => {
       workoutDate: now.toISOString(),
       createdOn: now.toISOString(),
       lastUpdated: now.toISOString(),
-      description: `Workout completed on ${now.toLocaleDateString()} at ${now.toLocaleTimeString()}`,
+      description: `Workout logged on ${now.toLocaleDateString()} at ${now.toLocaleTimeString()}`,
       workoutDetails: {
         workoutTimestamp: now.toISOString(),
         workoutTitle: ex.name ?? "",
@@ -820,7 +826,7 @@ const CustomLog: React.FC<PostWorkoutLogProps> = ({ isDone }) => {
       ],
     });
     const now = new Date();
-    const logObj = {
+    const logObj: WorkoutLogType = {
       logId: "",
       userId: user?.id ?? "",
       userName: user?.name ?? "",
@@ -828,22 +834,26 @@ const CustomLog: React.FC<PostWorkoutLogProps> = ({ isDone }) => {
       workoutDate: now.toISOString(),
       createdOn: now.toISOString(),
       lastUpdated: now.toISOString(),
-      description: `Workout completed on ${now.toLocaleDateString()} at ${now.toLocaleTimeString()}`,
+      description: `Workout logged on ${now.toLocaleDateString()} at ${now.toLocaleTimeString()}`,
       workoutDetails: {
         workoutTimestamp: now.toISOString(),
         workoutTitle: selectedWorkout?.name ?? "",
-        workoutId: selectedWorkout?.id ?? "",
         duration: 0,
         exerciseList:
           selectedWorkout?.blocks?.flatMap((b: any) => b.items ?? []) ?? [],
         exercisesCompleted: [],
         type:
-          typeof selectedWorkout?.type === "string" ? selectedWorkout.type : "",
+          selectedWorkout?.type && selectedWorkout?.type !== ""
+            ? selectedWorkout.type
+            : "custom",
       },
       rating: undefined,
       intensity: undefined,
       notes: "",
     };
+    if (selectedWorkout && selectedWorkout.id && selectedWorkout.id !== "") {
+      logObj.workoutDetails.workoutId = selectedWorkout.id;
+    }
     setCurrentWorkoutLog(logObj);
   };
 
@@ -852,47 +862,25 @@ const CustomLog: React.FC<PostWorkoutLogProps> = ({ isDone }) => {
   const [newExerciseReps, setNewExerciseReps] = useState("");
   const [newExerciseCompleted, setNewExerciseCompleted] = useState(false);
 
-  const handleAddExercise = () => {
-    if (!selectedWorkout) return;
-    const newExercise: ExerciseType = {
-      id: "new-" + Date.now().toString(),
-      title: newExerciseName,
-      author: user?.name || "unknown",
-      type: "strength",
-      image: "",
-      tags: ["custom"],
-      details: {
-        sets: newExerciseSets,
-        reps: newExerciseReps,
-        restSecs: 0,
-        equipment: [],
-      },
-      description: "Custom Exercise",
-    };
-    // Add to currentWorkoutLog
-    if (currentWorkoutLog) {
-      setCurrentWorkoutLog({
-        ...currentWorkoutLog,
-        workoutDetails: {
-          ...currentWorkoutLog.workoutDetails,
-          exerciseList: [
-            ...currentWorkoutLog.workoutDetails.exerciseList,
-            newExercise,
-          ],
-          exercisesCompleted: newExerciseCompleted
-            ? [
-                ...currentWorkoutLog.workoutDetails.exercisesCompleted,
-                newExercise.id,
-              ]
-            : currentWorkoutLog.workoutDetails.exercisesCompleted,
-        },
-      });
-    }
-  };
-
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const [duration, setDuration] = useState(0);
+
+  const setDateTimeFromInput = (input: string) => {
+    // Split into date and time
+    const [datePart, timePart] = input.split("T");
+    const [year, month, day] = datePart.split("-").map(Number);
+    const [hour, minute, second = 0] = (timePart || "").split(":").map(Number);
+    const dt = new Date(year, month - 1, day, hour, minute, second);
+    setCurrentWorkoutLog(
+      currentWorkoutLog
+        ? {
+            ...currentWorkoutLog,
+            workoutDate: dt.toISOString(),
+          }
+        : null
+    );
+  };
 
   return (
     <>
@@ -990,17 +978,11 @@ const CustomLog: React.FC<PostWorkoutLogProps> = ({ isDone }) => {
                   <input
                     type="datetime-local"
                     className="border border-neutral-200 rounded-sm p-2 w-40 text-base grow"
-                    value={currentWorkoutLog?.workoutDate?.slice(0, 16) || ""}
+                    value={workoutDate}
                     onChange={(e) => {
                       console.log("New Date Value: ", e.target.value);
-                      setCurrentWorkoutLog(
-                        currentWorkoutLog
-                          ? {
-                              ...currentWorkoutLog,
-                              workoutDate: e.target.value,
-                            }
-                          : null
-                      );
+                      setWorkoutDate(e.target.value);
+                      setDateTimeFromInput(e.target.value);
                     }}
                   />
                 </div>
@@ -1024,32 +1006,15 @@ const CustomLog: React.FC<PostWorkoutLogProps> = ({ isDone }) => {
                   {
                     // Map through currentWorkoutLog?.workoutDetails.exercises to render ExerciseLogLi components
                     currentWorkoutLog?.workoutDetails.exerciseList.map(
-                      (exercise, index) => {
-                        let isComplete;
-                        if (
-                          "id" in currentWorkoutLog.workoutDetails.exerciseList
-                        ) {
-                          //console.log("Exercise List: ", exercise.id);
-                          isComplete =
-                            currentWorkoutLog.workoutDetails.exercisesCompleted.includes(
-                              exercise.id
-                            );
-                        } else {
-                          isComplete =
-                            currentWorkoutLog.workoutDetails.exercisesCompleted.includes(
-                              exercise.id
-                            );
-                          //console.log("Exer is complete: ", isComplete);
-                        }
-
-                        return (
-                          <ExerciseLogLi
-                            key={index}
-                            complete={isComplete}
-                            exerciseObject={exercise}
-                          />
-                        );
-                      }
+                      (exercise, index) => (
+                        <ExerciseLogLi
+                          key={index}
+                          complete={currentWorkoutLog.workoutDetails.exercisesCompleted.includes(
+                            exercise.exerciseId
+                          )}
+                          exerciseObject={exercise}
+                        />
+                      )
                     )
                   }
                 </ul>

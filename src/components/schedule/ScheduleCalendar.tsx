@@ -151,7 +151,7 @@ const ScheduleBlock = ({ event, onToast }: ScheduleBlockProps) => {
       </div>
       <div className="h-full aspect-square w-auto bg-neutral-400 rounded-r-2xl overflow-hidden">
         <img
-          src="/running-default.webp"
+          src="/browse-web/running-default.webp"
           alt=""
           className="w-full h-full object-cover"
         />
