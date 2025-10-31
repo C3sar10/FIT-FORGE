@@ -14,7 +14,7 @@ interface ExerProps {
   setCompletedList?: (ids: string[]) => void;
 }
 
-export const ExerLi = ({
+const ExerLi = ({
   exercise,
   completed,
   setCompletedList,
