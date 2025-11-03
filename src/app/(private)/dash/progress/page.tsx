@@ -24,6 +24,7 @@ import {
   ChevronLeft,
   ChevronRight,
   LineChart,
+  Star,
 } from "lucide-react";
 import GraphicCard from "@/components/ui/GraphicCard";
 import { useTheme } from "next-themes";
@@ -31,6 +32,7 @@ import { LogAPI } from "@/lib/api";
 import { WorkoutLogType } from "@/types/progress";
 import { set } from "mongoose";
 import { useRouter } from "next/navigation";
+import { data } from "framer-motion/client";
 
 type Props = {};
 
@@ -50,7 +52,18 @@ const page = (props: Props) => {
   const [highestStreak, setHighestStreak] = useState(0); // in days
   const [highestStreakFullMonth, setHighestStreakFullMonth] = useState(0); // in days
   const [favoriteWorkout, setFavoriteWorkout] = useState(""); // workout name
-  const [bestWorkoutDay, setBestWorkoutDay] = useState(""); // e.g. "Tuesday"
+  const [favoriteWorkoutFullMonth, setFavoriteWorkoutFullMonth] = useState(""); // workout name
+  const [avgRating, setAvgRating] = useState(0); // average rating
+  const [fullMonthAvgRating, setFullMonthAvgRating] = useState(0); // average rating
+  const [dataRating, setDataRating] = useState<{
+    [key: number]: {
+      month: number;
+      ratingList: {
+        date: string;
+        rating: number;
+      }[];
+    }[];
+  }>({});
   const [favWorkoutData, setFavWorkoutData] = useState<{
     [key: number]: {
       month: number;
@@ -101,6 +114,9 @@ const page = (props: Props) => {
   const year = periodStart.getFullYear();
   const month = periodStart.getMonth();
   const day = periodStart.getDate();
+  const fullMonthYear = fullMonthPeriodStart.getFullYear();
+  const fullMonthMonth = fullMonthPeriodStart.getMonth();
+  const fullMonthDay = fullMonthPeriodStart.getDate();
 
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const periodEndDay = day === 1 ? Math.min(15, daysInMonth) : daysInMonth;
@@ -167,6 +183,16 @@ const page = (props: Props) => {
       }[];
     } = {};
 
+    const currDataRating: {
+      [key: number]: {
+        month: number;
+        ratingList: {
+          date: string;
+          rating: number;
+        }[];
+      }[];
+    } = {};
+
     userLogData.forEach((item) => {
       // createdOn should be a timestamp string
       const d = item.workoutDate
@@ -177,6 +203,28 @@ const page = (props: Props) => {
       const itemMonth = d.getMonth();
       const itemDate = d.getDate();
       const secs = parseDurationToSeconds(item.workoutDetails?.duration as any);
+
+      if (item.rating) {
+        // accumulate ratings for average calculation
+        if (!currDataRating[itemYear]) {
+          currDataRating[itemYear] = [];
+          currDataRating[itemYear][itemMonth] = {
+            month: itemMonth,
+            ratingList: [
+              {
+                date: item.workoutDate || item.createdOn,
+                rating: item.rating,
+              },
+            ],
+          };
+        } else {
+          currDataRating[itemYear][itemMonth].ratingList.push({
+            date: item.workoutDate || item.createdOn,
+            rating: item.rating,
+          });
+        }
+      }
+      setDataRating(currDataRating);
 
       if (item.workoutDetails?.workoutTitle) {
         if (!favoriteWorkoutCount[itemYear]) {
@@ -369,21 +417,59 @@ const page = (props: Props) => {
         );
       }
 
-      setFavoriteWorkout(favWorkout || "N/A");
+      const favWorkoutFullMonth =
+        favWorkoutData[fullMonthYear]?.[fullMonthMonth]?.workoutMap || {};
+      let favWorkoutFullMonthName;
+      if (favWorkoutFullMonth && Object.keys(favWorkoutFullMonth).length > 0) {
+        favWorkoutFullMonthName = Object.keys(favWorkoutFullMonth).reduce(
+          (a, b) => (favWorkoutFullMonth[a] > favWorkoutFullMonth[b] ? a : b)
+        );
+      }
 
-      setBestWorkoutDay("Tuesday");
+      setFavoriteWorkout(favWorkout || "N/A");
+      setFavoriteWorkoutFullMonth(favWorkoutFullMonthName || "N/A");
+
+      // Ratings summary
+      let totalRating = 0;
+      let ratingCount = 0;
+      const ratingsForMonth =
+        dataRating[fullMonthYear]?.[fullMonthMonth]?.ratingList || [];
+      const ratingsForPeriod = dataRating[year]?.[month]?.ratingList || [];
+      ratingsForMonth.forEach((entry) => {
+        totalRating += entry.rating;
+        ratingCount += 1;
+      });
+      let totalRatingPeriod = 0;
+      let ratingCountPeriod = 0;
+      ratingsForPeriod.forEach((entry) => {
+        let entryDate = new Date(entry.date);
+        if (
+          entryDate.getDate() >= periodStart.getDate() &&
+          entryDate.getDate() <= periodEndDay
+        ) {
+          totalRatingPeriod += entry.rating;
+          ratingCountPeriod += 1;
+        }
+      });
+      const avgRating =
+        ratingCount > 0 ? Number((totalRating / ratingCount).toFixed(1)) : 0;
+      setFullMonthAvgRating(avgRating);
+      const avgRatingPeriod =
+        ratingCountPeriod > 0
+          ? Number((totalRatingPeriod / ratingCountPeriod).toFixed(1))
+          : 0;
+      setAvgRating(avgRatingPeriod);
     } else {
       const totalMins = yearData.reduce((sum, month) => sum + month.value, 0);
       setTotalWorkoutTime(totalMins);
       setHighestStreak(0);
       setFavoriteWorkout("N/A");
-      setBestWorkoutDay("N/A");
     }
   };
 
   useEffect(() => {
     StatsCardUpdate();
-  }, [viewMode, monthData, favWorkoutData]);
+  }, [viewMode, monthData, favWorkoutData, fullMonthData]);
 
   const weekday = today.toLocaleDateString("en-US", { weekday: "long" });
   const fullDate = today.toLocaleDateString("en-US", {
@@ -588,30 +674,70 @@ const page = (props: Props) => {
       </div>
 
       <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-        <StatsCard
-          icon={<Clock color="#65A30D" size={28} />}
-          format="mins"
-          value={totalWorkoutTime}
-          description="Total Workout Time"
-        />
-        <StatsCard
-          icon={<LineChart color="#65A30D" size={28} />}
-          format="days"
-          value={highestStreak}
-          description="Highest Streak"
-        />
-        <StatsCard
-          icon={
-            <DumbbellIcon className="rotate-45" color="#65A30D" size={28} />
-          }
-          value={favoriteWorkout}
-          description="Favorite Workout"
-        />
-        <StatsCard
-          icon={<CalendarDaysIcon color="#65A30D" size={28} />}
-          value="Tuesday"
-          description="Best Workout Day"
-        />
+        <div className="hidden md:flex">
+          <StatsCard
+            icon={<Clock color="#65A30D" size={28} />}
+            format="mins"
+            value={totalWorkoutTimeFullMonth}
+            description="Total Workout Time"
+          />
+        </div>
+        <div className="flex md:hidden ">
+          <StatsCard
+            icon={<Clock color="#65A30D" size={28} />}
+            format="mins"
+            value={totalWorkoutTime}
+            description="Total Workout Time"
+          />
+        </div>
+        <div className="hidden md:flex">
+          <StatsCard
+            icon={<LineChart color="#65A30D" size={28} />}
+            format="days"
+            value={highestStreakFullMonth}
+            description="Highest Streak"
+          />
+        </div>
+        <div className="flex md:hidden ">
+          <StatsCard
+            icon={<LineChart color="#65A30D" size={28} />}
+            format="days"
+            value={highestStreak}
+            description="Highest Streak"
+          />
+        </div>
+        <div className="hidden md:flex">
+          <StatsCard
+            icon={
+              <DumbbellIcon className="rotate-45" color="#65A30D" size={28} />
+            }
+            value={favoriteWorkoutFullMonth}
+            description="Favorite Workout"
+          />
+        </div>
+        <div className="flex md:hidden ">
+          <StatsCard
+            icon={
+              <DumbbellIcon className="rotate-45" color="#65A30D" size={28} />
+            }
+            value={favoriteWorkout}
+            description="Favorite Workout"
+          />
+        </div>
+        <div className="hidden md:flex">
+          <StatsCard
+            icon={<Star color="#65A30D" size={28} />}
+            value={`${fullMonthAvgRating}/5`}
+            description="Avg. Workout Rating"
+          />
+        </div>
+        <div className="flex md:hidden ">
+          <StatsCard
+            icon={<Star color="#65A30D" size={28} />}
+            value={`${avgRating}/5`}
+            description="Avg. Workout Rating"
+          />
+        </div>
       </div>
 
       <div className="w-full flex flex-col gap-4 mt-4">
