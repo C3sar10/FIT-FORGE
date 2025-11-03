@@ -41,11 +41,14 @@ const page = (props: Props) => {
   const [isLight, setIsLight] = useState(theme === "light");
   const [userLogData, setUserLogData] = useState<WorkoutLogType[]>([]);
   const [monthData, setMonthData] = useState<any[]>([]);
+  const [fullMonthData, setFullMonthData] = useState<any[]>([]);
   const [yearData, setYearData] = useState<any[]>([]);
 
   // stat cards data
   const [totalWorkoutTime, setTotalWorkoutTime] = useState(0); // in minutes
+  const [totalWorkoutTimeFullMonth, setTotalWorkoutTimeFullMonth] = useState(0); // in minutes
   const [highestStreak, setHighestStreak] = useState(0); // in days
+  const [highestStreakFullMonth, setHighestStreakFullMonth] = useState(0); // in days
   const [favoriteWorkout, setFavoriteWorkout] = useState(""); // workout name
   const [bestWorkoutDay, setBestWorkoutDay] = useState(""); // e.g. "Tuesday"
   const [favWorkoutData, setFavWorkoutData] = useState<{
@@ -66,6 +69,19 @@ const page = (props: Props) => {
   });
   const [viewMode, setViewMode] = useState<"month" | "year">("month");
   const today = new Date();
+
+  const [fullMonthPeriodStart, setFullMonthPeriodStart] = useState(() => {
+    const today = new Date();
+    return new Date(today.getFullYear(), today.getMonth(), 1);
+  });
+
+  const [fullMonthPeriodEnd, setFullMonthPeriodEnd] = useState(() => {
+    const start = fullMonthPeriodStart;
+    const year = start.getFullYear();
+    const month = start.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    return new Date(year, month, daysInMonth);
+  });
 
   const months = [
     "Jan",
@@ -122,6 +138,14 @@ const page = (props: Props) => {
           value: 0,
         }))
       );
+      const daysCountFullMonth = fullMonthPeriodEnd.getDate();
+      setFullMonthData(
+        Array.from({ length: daysCountFullMonth }, (_, i) => ({
+          name: `${i + 1}`,
+          value: 0,
+        }))
+      );
+
       setYearData(
         Array.from({ length: 12 }, (_, i) => ({ name: months[i], value: 0 }))
       );
@@ -132,6 +156,10 @@ const page = (props: Props) => {
     const daysCount = periodEndDay - day + 1;
     const monthAgg: number[] = Array.from({ length: daysCount }, () => 0);
     const yearAgg: number[] = Array.from({ length: 12 }, () => 0);
+    const fullMonthAgg: number[] = Array.from(
+      { length: fullMonthPeriodEnd.getDate() },
+      () => 0
+    );
     const favoriteWorkoutCount: {
       [key: number]: {
         month: number;
@@ -182,6 +210,16 @@ const page = (props: Props) => {
         }
       }
 
+      if (
+        itemYear === fullMonthPeriodStart.getFullYear() &&
+        itemMonth === fullMonthPeriodStart.getMonth()
+      ) {
+        if (itemDate >= 1 && itemDate <= fullMonthPeriodEnd.getDate()) {
+          const idxFullMonth = itemDate - 1;
+          fullMonthAgg[idxFullMonth] += secs;
+        }
+      }
+
       // accumulate into yearAgg (for the selected year)
       if (itemYear === year) {
         yearAgg[itemMonth] += secs;
@@ -199,14 +237,24 @@ const page = (props: Props) => {
       name: months[i],
       value: Math.round(secs / 60),
     }));
+    const fullMonthDataOut = fullMonthAgg.map((secs, i) => ({
+      name: `${i + 1}`,
+      value: Math.round(secs / 60),
+    }));
 
     setMonthData(monthDataOut);
     setYearData(yearDataOut);
-  }, [userLogData, periodStart]);
+    setFullMonthData(fullMonthDataOut);
+  }, [userLogData, periodStart, fullMonthPeriodStart, fullMonthPeriodEnd]);
 
   const monthName2 = new Intl.DateTimeFormat("en-US", { month: "long" }).format(
     periodStart
   );
+
+  const monthName3 = new Intl.DateTimeFormat("en-US", { month: "long" }).format(
+    fullMonthPeriodStart
+  );
+
   const periodLabel = `${monthName2} ${day} - ${periodEndDay}`;
 
   const handlePrevPeriod = () => {
@@ -229,6 +277,18 @@ const page = (props: Props) => {
     setPeriodStart(new Date(newYear, newMonth, newDay));
   };
 
+  const handlePrevPeriodFullMonth = () => {
+    let newMonth = fullMonthPeriodStart.getMonth() - 1;
+    let newYear = fullMonthPeriodStart.getFullYear();
+    if (newMonth < 0) {
+      newMonth = 11;
+      newYear -= 1;
+    }
+    setFullMonthPeriodStart(new Date(newYear, newMonth, 1));
+    const daysInNewMonth = new Date(newYear, newMonth + 1, 0).getDate();
+    setFullMonthPeriodEnd(new Date(newYear, newMonth, daysInNewMonth));
+  };
+
   const handleNextPeriod = () => {
     let newDay, newMonth, newYear;
     const currentMonthDays = new Date(year, month + 1, 0).getDate();
@@ -249,10 +309,27 @@ const page = (props: Props) => {
     setPeriodStart(new Date(newYear, newMonth, newDay));
   };
 
+  const handleNextPeriodFullMonth = () => {
+    let newMonth = fullMonthPeriodStart.getMonth() + 1;
+    let newYear = fullMonthPeriodStart.getFullYear();
+    if (newMonth > 11) {
+      newMonth = 0;
+      newYear += 1;
+    }
+    setFullMonthPeriodStart(new Date(newYear, newMonth, 1));
+    const daysInNewMonth = new Date(newYear, newMonth + 1, 0).getDate();
+    setFullMonthPeriodEnd(new Date(newYear, newMonth, daysInNewMonth));
+  };
+
   const StatsCardUpdate = () => {
     //
     if (viewMode === "month") {
       const totalMins = monthData.reduce((sum, day) => sum + day.value, 0);
+      const totalMinsFullMonth = fullMonthData.reduce(
+        (sum, day) => sum + day.value,
+        0
+      );
+      setTotalWorkoutTimeFullMonth(totalMinsFullMonth);
       setTotalWorkoutTime(totalMins);
 
       // highest streak calculation
@@ -268,6 +345,20 @@ const page = (props: Props) => {
         }
       });
       setHighestStreak(maxStreak);
+      // highest streak for full month
+      let streakFullMonth = 0;
+      let maxStreakFullMonth = 0;
+
+      fullMonthData.forEach((day) => {
+        if (day.value > 0) {
+          streakFullMonth += 1;
+          if (streakFullMonth > maxStreakFullMonth)
+            maxStreakFullMonth = streakFullMonth;
+        } else {
+          streakFullMonth = 0;
+        }
+      });
+      setHighestStreakFullMonth(maxStreakFullMonth);
       // favorite workout and best day would require more detailed log data analysis
       // For simplicity, we'll set dummy values here
       const favWorkoutMonth = favWorkoutData[year]?.[month]?.workoutMap || {};
@@ -305,20 +396,16 @@ const page = (props: Props) => {
     <div className="w-full h-full flex flex-col items-center px-4 gap-4">
       <div className="w-full flex items-center justify-between h-full pt-4">
         <span className="w-1/4 inline-flex items-center justify-between">
-          <h1 className="text-3xl md:text-4xl font-medium">
-            {viewMode === "month" ? "Month" : "Year"}
-          </h1>
-          <button
-            onClick={() => setViewMode(viewMode === "month" ? "year" : "month")}
-            className="ml-2 text-2xl hover:cursor-pointer"
-            aria-label="Toggle view"
+          <select
+            className="text-3xl md:text-4xl p-2 border border-neutral-200 rounded-md"
+            value={viewMode}
+            onChange={(e) =>
+              setViewMode(e.target.value === "month" ? "month" : "year")
+            }
           >
-            {viewMode === "month" ? (
-              <ChevronDown size={28} />
-            ) : (
-              <ChevronUp size={28} />
-            )}
-          </button>
+            <option value="month">Month</option>
+            <option value="year">Year</option>
+          </select>
         </span>
         <h1 className="text-sm md:text-base font-mediummd:text-xl flex flex-col leading-tight">
           <p className="">{weekday}</p>
@@ -331,7 +418,11 @@ const page = (props: Props) => {
             isLight ? "bg-white" : "bg-[#1e1e1e]"
           } pt-12 pb-6 rounded-t-[8px]`}
         >
-          <ResponsiveContainer width={"100%"} height={300}>
+          <ResponsiveContainer
+            width={"100%"}
+            height={300}
+            className={"block md:hidden"}
+          >
             {viewMode === "month" ? (
               <BarChart
                 data={monthData}
@@ -367,9 +458,50 @@ const page = (props: Props) => {
               </BarChart>
             )}
           </ResponsiveContainer>
+          <ResponsiveContainer
+            width={"100%"}
+            height={300}
+            className={"hidden md:block"}
+          >
+            {viewMode === "month" ? (
+              <BarChart
+                data={fullMonthData}
+                margin={{ top: 0, right: 8, bottom: 8, left: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis
+                  dataKey="name"
+                  tickFormatter={(value) =>
+                    parseInt(value) % 2 === 0 ? value : ""
+                  }
+                  interval={0}
+                />
+                <YAxis />
+                <Tooltip />
+                <Bar
+                  dataKey="value"
+                  fill="#65A30D"
+                  radius={[6, 6, 0, 0]}
+                />{" "}
+                {/* Indigo-500 */}
+              </BarChart>
+            ) : (
+              <BarChart
+                data={yearData}
+                margin={{ top: 0, right: 8, bottom: 8, left: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="value" fill="#65A30D" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            )}
+          </ResponsiveContainer>
         </div>
+
         <span className="w-full flex items-center justify-between px-8 py-4 bg-black text-white">
-          <span className="inline-flex items-center gap-2">
+          <span className="inline-flex items-center gap-2 md:hidden">
             {viewMode === "month" ? (
               <>
                 <button
@@ -378,9 +510,63 @@ const page = (props: Props) => {
                 >
                   <ChevronLeft className="size-6" />
                 </button>
-                <h2 className="text-2xl md:text-3xl">{monthName2}</h2>
+                <div className="flex flex-col items-center gap-0">
+                  <h2 className="text-2xl md:text-3xl leading-tight">
+                    {monthName2}
+                  </h2>
+                  <p className="text-sm text-neutral-400">
+                    From {periodStart.getDate() === 1 ? "1st" : "16th"} to{" "}
+                    {periodEndDay === 31
+                      ? "31st"
+                      : periodEndDay === 30
+                      ? "30th"
+                      : periodEndDay === 29
+                      ? "29th"
+                      : periodEndDay === 28
+                      ? "28th"
+                      : "15th"}
+                  </p>
+                </div>
+
                 <button
                   onClick={handleNextPeriod}
+                  className="text-2xl px-2 hover:cursor-pointer"
+                >
+                  <ChevronRight className="size-6" />
+                </button>
+              </>
+            ) : (
+              <h2 className="text-2xl md:text-3xl">{year}</h2>
+            )}
+          </span>
+          <span className="hidden md:inline-flex items-center gap-2">
+            {viewMode === "month" ? (
+              <>
+                <button
+                  onClick={handlePrevPeriodFullMonth}
+                  className="text-2xl px-2 hover:cursor-pointer"
+                >
+                  <ChevronLeft className="size-6" />
+                </button>
+                <div className="flex flex-col items-center gap-0">
+                  <h2 className="text-2xl md:text-3xl leading-tight">
+                    {monthName3}
+                  </h2>
+                  <p className="text-sm text-neutral-400">
+                    From {fullMonthPeriodStart.getDate() === 1 ? "1st" : "16th"}{" "}
+                    to{" "}
+                    {fullMonthPeriodEnd.getDate() === 31
+                      ? "31st"
+                      : fullMonthPeriodEnd.getDate() === 30
+                      ? "30th"
+                      : fullMonthPeriodEnd.getDate() === 29
+                      ? "29th"
+                      : "28th"}
+                  </p>
+                </div>
+
+                <button
+                  onClick={handleNextPeriodFullMonth}
                   className="text-2xl px-2 hover:cursor-pointer"
                 >
                   <ChevronRight className="size-6" />
