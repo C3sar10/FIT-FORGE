@@ -218,6 +218,12 @@ const page = (props: Props) => {
             ],
           };
         } else {
+          if (!currDataRating[itemYear][itemMonth]) {
+            currDataRating[itemYear][itemMonth] = {
+              month: itemMonth,
+              ratingList: [],
+            };
+          }
           currDataRating[itemYear][itemMonth].ratingList.push({
             date: item.workoutDate || item.createdOn,
             rating: item.rating,

@@ -15,6 +15,7 @@ import { TimerControls, TimerDisplay } from "./TimerDisplay";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query"; // Add this
 import { WorkoutLogType } from "@/types/progress";
+import { useAuth } from "@/context/AuthContext";
 
 interface ExerciseLiProps {
   exerciseObj: ExerciseType;
@@ -123,6 +124,7 @@ const WorkoutPlayer = (props: Props) => {
   const [exerciseList, setExerciseList] = useState<ExerciseType[]>([]);
   const [isLoadingExercises, setIsLoadingExercises] = useState(false); // Add for loading state
   const router = useRouter();
+  const { user } = useAuth();
 
   // Fetch workout from cache or API
   const {
@@ -256,11 +258,8 @@ const WorkoutPlayer = (props: Props) => {
       currWorkoutId
     ) {
       setIsPostWorkoutLog(true);
-      let user = null;
+
       (async () => {
-        try {
-          user = await AuthAPI.me();
-        } catch {}
         if (user) {
           const now = new Date();
           const logObj = {
@@ -277,8 +276,13 @@ const WorkoutPlayer = (props: Props) => {
               workoutTitle: workoutData.name ?? "",
               workoutId: currWorkoutId,
               duration: 0,
-              exerciseList:
-                workoutData.blocks?.flatMap((b: any) => b.items ?? []) ?? [],
+              exerciseList: exerciseList.map((exercise) => ({
+                exerciseId: exercise.id,
+                name: exercise.title,
+                sets: exercise.details.sets,
+                reps: exercise.details.reps,
+                restSecs: exercise.details.restSecs,
+              })),
               exercisesCompleted: [],
               type:
                 typeof workoutData.type === "string" ? workoutData.type : "",
