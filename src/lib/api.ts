@@ -143,6 +143,36 @@ export const AuthAPI = {
       body: refreshToken ? JSON.stringify({ refreshToken }) : undefined,
     }).then((r) => r.json());
   },
+  updateUser: (body: {
+    id: string;
+    name?: string;
+    email?: string;
+    phone?: {
+      e164?: string;
+      verified?: boolean;
+    };
+    gender?: string;
+    dob?: string;
+    address?: {
+      street?: string;
+      city?: string;
+      state?: string;
+      zipcode?: string;
+      country?: string;
+    };
+    height?: {
+      value?: number;
+      unit?: string;
+    };
+    weight?: {
+      value?: number;
+      unit?: string;
+    };
+  }) =>
+    api(`/auth/${body.id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }).then((r) => r.json()),
 };
 
 export const LogAPI = {

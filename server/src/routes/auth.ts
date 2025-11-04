@@ -35,6 +35,13 @@ router.post("/register", async (req, res) => {
     passwordHash,
     providers: [],
     sessions: [],
+    phone: null,
+    address: null,
+    dob: null,
+    gender: null,
+    height: null,
+    weight: null,
+    schemaVersion: 2,
   });
 
   const tokenId = crypto.randomUUID().toString();
@@ -44,7 +51,17 @@ router.post("/register", async (req, res) => {
   const access = signAccess({ sub: user.id });
   const refresh = signRefresh({ sub: user.id, jti: tokenId });
   res.json({
-    user: { id: user.id, name: user.name, email: user.email },
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      address: user.address,
+      dob: user.dob,
+      gender: user.gender,
+      height: user.height,
+      weight: user.weight,
+    },
     accessToken: access,
     refreshToken: refresh,
   });
@@ -66,7 +83,17 @@ router.post("/login", async (req, res) => {
   const access = signAccess({ sub: user.id });
   const refresh = signRefresh({ sub: user.id, jti: tokenId });
   res.json({
-    user: { id: user.id, name: user.name, email: user.email },
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      address: user.address,
+      dob: user.dob,
+      gender: user.gender,
+      height: user.height,
+      weight: user.weight,
+    },
     accessToken: access,
     refreshToken: refresh,
   });
@@ -84,7 +111,19 @@ router.get("/me", async (req, res) => {
     const payload = verifyAccess(access);
     const user = await User.findById(payload.sub).select("name email");
     return res.json({
-      user: user ? { id: user.id, name: user.name, email: user.email } : null,
+      user: user
+        ? {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            phone: user.phone,
+            address: user.address,
+            dob: user.dob,
+            gender: user.gender,
+            height: user.height,
+            weight: user.weight,
+          }
+        : null,
     });
   } catch {
     return res.json({ user: null });
@@ -167,8 +206,32 @@ router.post("/refresh", async (req, res) => {
   res.json({
     accessToken: access,
     refreshToken: refresh,
-    user: { id: user.id, name: user.name, email: user.email },
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      address: user.address,
+      dob: user.dob,
+      gender: user.gender,
+      height: user.height,
+      weight: user.weight,
+    },
   });
+});
+
+router.patch("/:id", async (req, res) => {
+  const { id } = req.params;
+  const updates = req.body;
+  try {
+    const user = await User.findByIdAndUpdate(id, updates, { new: true });
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    res.json({ user });
+  } catch (error) {
+    res.status(400).json({ error: "Failed to update user" });
+  }
 });
 
 router.post("/logout", async (req, res) => {

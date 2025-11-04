@@ -17,6 +17,25 @@ const ProviderSchema = new Schema(
   { _id: false }
 );
 
+const PhoneSchema = new Schema(
+  {
+    e164: { type: String, default: null },
+    verified: { type: Boolean, default: false },
+  },
+  { _id: false }
+);
+
+const AddressSchema = new Schema(
+  {
+    street: { type: String, default: null },
+    city: { type: String, default: null },
+    state: { type: String, default: null },
+    country: { type: String, default: null },
+    zipcode: { type: String, default: null },
+  },
+  { _id: false }
+);
+
 const UserSchema = new Schema(
   {
     email: { type: String, unique: true, index: true, required: true },
@@ -24,9 +43,26 @@ const UserSchema = new Schema(
     name: { type: String },
     providers: { type: [ProviderSchema], default: [] },
     sessions: { type: [SessionSchema], default: [] },
+    //version 2 fields
+    phone: { type: PhoneSchema, default: undefined },
+    address: { type: AddressSchema, default: undefined },
+    dob: { type: Date, default: null },
+    gender: { type: String, enum: ["male", "female", "other"], default: null },
+    height: {
+      value: { type: Number, default: null },
+      unit: { type: String, enum: ["cm", "in"], default: "in" },
+    },
+    weight: {
+      value: { type: Number, default: null },
+      unit: { type: String, enum: ["kg", "lb"], default: "lb" },
+    },
+    schemaVersion: { type: Number, default: 1 },
   },
   { timestamps: true }
 );
+
+UserSchema.index({ "phone.e164": 1 }, { sparse: true });
+UserSchema.index({ schemaVersion: 1 });
 
 export type UserDoc = InferSchemaType<typeof UserSchema>;
 const User = model<UserDoc>("User", UserSchema);

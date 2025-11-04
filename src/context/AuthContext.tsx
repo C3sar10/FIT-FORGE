@@ -1,11 +1,11 @@
 "use client";
 import { createContext, useContext, useEffect, useState } from "react";
 import { AuthAPI } from "@/lib/api";
-
-type User = { id: string; name?: string; email: string } | null;
+import { User } from "@/types/auth";
 
 type AuthCtx = {
-  user: User;
+  user: User | null;
+  setUser: React.Dispatch<React.SetStateAction<User | null>>;
   loading: boolean;
   login: (
     email: string,
@@ -25,7 +25,7 @@ type AuthCtx = {
 const Ctx = createContext<AuthCtx | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [rememberMe, setRememberMe] = useState(false); // State to track "remember me" preference
 
@@ -121,6 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     <Ctx.Provider
       value={{
         user,
+        setUser,
         loading,
         login,
         register,

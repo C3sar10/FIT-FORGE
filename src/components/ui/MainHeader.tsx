@@ -8,6 +8,7 @@ import ThemeToggle from "./ThemeToggleButton";
 import { useAuth } from "@/context/AuthContext";
 import { useTimer } from "@/context/TimerContext";
 import { useDialog } from "@/context/DialogContext";
+import Link from "next/link";
 
 type Props = {
   hasDetails: boolean;
@@ -75,9 +76,14 @@ const UserMenu: React.FC<UserMenuProps> = ({ isOpen, toggleMenu }) => {
         </span>
       </div>
       <ul className="w-full flex flex-col divide-y divide-neutral-100">
-        <li className="w-full py-3 flex items-center justify-between gap-0 hover:text-lime-500 transition-colors ease-out duration-300 cursor-pointer">
-          <p className="font-medium text-sm">Profile</p>
-          <ChevronRight size={16} />
+        <li className="w-full py-3 gap-0 hover:text-lime-500 transition-colors ease-out duration-300 cursor-pointer">
+          <Link
+            href="/dash/profile"
+            className="w-full flex items-center justify-between gap-2"
+          >
+            <p className="font-medium text-sm">Profile</p>
+            <ChevronRight size={16} />
+          </Link>
         </li>
         <li className="w-full py-3 flex items-center justify-between gap-0 hover:text-lime-500 transition-colors ease-out duration-300 cursor-pointer">
           <p className="font-medium text-sm">Settings</p>
