@@ -1,3 +1,4 @@
+"use client";
 import React from "react";
 
 import { RadialBarChart, RadialBar, ResponsiveContainer } from "recharts";

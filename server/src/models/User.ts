@@ -50,11 +50,11 @@ const UserSchema = new Schema(
     gender: { type: String, enum: ["male", "female", "other"], default: null },
     height: {
       value: { type: Number, default: null },
-      unit: { type: String, enum: ["cm", "in"], default: "in" },
+      unit: { type: String, enum: ["cm", "in", ""], default: "in" },
     },
     weight: {
       value: { type: Number, default: null },
-      unit: { type: String, enum: ["kg", "lb"], default: "lb" },
+      unit: { type: String, enum: ["kg", "lb", ""], default: "lb" },
     },
     schemaVersion: { type: Number, default: 1 },
   },
