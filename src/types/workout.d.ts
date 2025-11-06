@@ -6,7 +6,6 @@ export interface WorkoutType {
   description: string;
   author: string;
   type: string;
-  tags: string[];
   isFavorite: boolean;
   blocks: [
     {

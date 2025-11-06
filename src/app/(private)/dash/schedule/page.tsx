@@ -1,6 +1,4 @@
-"use client";
 import ScheduleCalendar from "@/components/schedule/ScheduleCalendar";
-import React from "react";
 
 type Props = {};
 

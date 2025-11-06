@@ -20,26 +20,11 @@ import { useRouter } from "next/navigation";
 import type { Event } from "@/types/event";
 import { useDialog } from "@/context/DialogContext";
 import Toast from "@/components/ui/Toast";
+import { getWeekDates, getWeekDatesForSelected } from "@/utils/utils";
 
 type Props = {};
 
 const WeekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-function getWeekDates(date: Date) {
-  const start = new Date(date);
-  start.setDate(date.getDate() - date.getDay());
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(start);
-    d.setDate(start.getDate() + i);
-    return d;
-  });
-}
-
-type ScheduleBlockMenuProps = {
-  menuOpen: boolean;
-  setMenuOpen: (open: boolean) => void;
-  event: Event;
-};
 
 type ScheduleBlockProps = {
   event: Event;
@@ -268,8 +253,6 @@ const ScheduleCalendar = (props: Props) => {
     if (!d) return;
     setDate(d);
     setHighlightDate(d);
-    // clear highlight after a short duration
-    //setTimeout(() => setHighlightDate(null), 1500);
   };
 
   // Fetch all user events once per session and cache in React Query.
@@ -292,9 +275,6 @@ const ScheduleCalendar = (props: Props) => {
     refetchOnMount: false,
   });
 
-  // Debug state for fetch errors (visible in dev only)
-  const [lastFetchError, setLastFetchError] = useState<string | null>(null);
-
   // Sync React Query results into local state so existing code can use `userEvents`.
   // We only set when the query returns data.
   useEffect(() => {
@@ -309,9 +289,8 @@ const ScheduleCalendar = (props: Props) => {
     (async () => {
       try {
         await refetchEvents();
-        setLastFetchError(null);
       } catch (err: any) {
-        setLastFetchError(String(err?.message ?? err));
+        console.error("Error refetching events:", err);
       }
     })();
     // Only run on mount
@@ -336,17 +315,6 @@ const ScheduleCalendar = (props: Props) => {
   const miniCalRef = React.useRef<HTMLDivElement | null>(null);
   const bigCalRef = React.useRef<HTMLDivElement | null>(null);
   const dayBlockRefs = React.useRef<(HTMLDivElement | null)[]>([]);
-  // Helper to get all days in the week of the selected date
-  const getWeekDatesForSelected = (selected: Date | undefined) => {
-    if (!selected) return [];
-    const start = new Date(selected);
-    start.setDate(selected.getDate() - selected.getDay());
-    return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(start);
-      d.setDate(start.getDate() + i);
-      return d;
-    });
-  };
 
   // userEvents state is populated from React Query results below
   const [userEvents, setUserEvents] = useState<Event[]>([]);

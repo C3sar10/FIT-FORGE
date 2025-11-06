@@ -5,11 +5,12 @@ import { api } from "@/lib/api";
 import LargeSkeletonCards from "../ui/LargeSkeletonCards";
 import { useQuery } from "@tanstack/react-query"; // Add this
 import { WorkoutType } from "@/types/workout";
+import { randomFive, randomFiveWorkouts } from "@/utils/utils";
 
 type Props = {};
 
 const FeaturedWorkoutsSection = (props: Props) => {
-  const [featuredList, setFeaturedList] = useState([]);
+  const [featuredList, setFeaturedList] = useState<WorkoutType[]>([]);
 
   // Fetch with React Query - cached by key, no refetch if fresh
   const { data, isLoading } = useQuery({
@@ -28,12 +29,12 @@ const FeaturedWorkoutsSection = (props: Props) => {
         (w.tags ?? []).includes("featured")
       );
       // Shuffle
-      for (let i = featuredPool.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [featuredPool[i], featuredPool[j]] = [featuredPool[j], featuredPool[i]];
+      try {
+        const featuredFive = randomFiveWorkouts({ list: featuredPool });
+        setFeaturedList(featuredFive);
+      } catch (error) {
+        console.error("Error selecting featured workouts:", error);
       }
-      const featuredFive = featuredPool.slice(0, 5);
-      setFeaturedList(featuredFive);
     }
   }, [data]);
 
