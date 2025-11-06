@@ -1,3 +1,4 @@
+"use client";
 import React, { useEffect, useState } from "react";
 import LargeFeatureCards from "../ui/LargeFeatureCards";
 import { api } from "@/lib/api";

@@ -1,5 +1,6 @@
 "use client";
 import FeaturedExercisesSection from "@/components/exercises/FeaturedExercisesSection";
+import ActionButton from "@/components/ui/ActionButton";
 import MainSearchInput from "@/components/ui/MainSearchInput";
 import SmallBrowseCards from "@/components/workouts/SmallBrowseCards";
 import { api, fetchMine } from "@/lib/api";
@@ -11,23 +12,6 @@ import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 
 type Props = {};
-
-interface ActionButtonProps {
-  name: string;
-  Icon: LucideIcon | null;
-  action?: () => void;
-}
-
-const ActionButton: React.FC<ActionButtonProps> = ({ name, Icon, action }) => {
-  return (
-    <button
-      onClick={action}
-      className="w-full p-4 rounded-2xl hover:bg-[#1e1e1e] bg-black text-white flex items-center justify-center gap-2 text-center font-medium tracking-wider text-sm sm:text-base"
-    >
-      {Icon && <Icon size={18} />} {name}
-    </button>
-  );
-};
 
 const page = (props: Props) => {
   const [featuredList, setFeaturedList] = useState([]);

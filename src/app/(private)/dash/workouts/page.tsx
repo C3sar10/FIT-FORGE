@@ -1,4 +1,3 @@
-"use client";
 import BrowseSearchContainer from "@/components/ui/BrowseSearchContainer";
 import FeaturedWorkoutsSection from "@/components/workouts/FeaturedWorkoutsSection";
 
