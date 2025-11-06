@@ -12,7 +12,7 @@ const WorkoutLogSchema = new Schema(
     workoutDetails: {
       workoutTimestamp: { type: Date, required: true },
       workoutTitle: { type: String, required: true },
-      workoutId: { type: Schema.Types.ObjectId, required: false }, // Reference to workout
+      workoutId: { type: Schema.Types.ObjectId || null, required: false }, // Reference to workout
       duration: { type: Schema.Types.Mixed }, // String or number (e.g., "30min" or 1800 secs)
       exerciseList: [
         {

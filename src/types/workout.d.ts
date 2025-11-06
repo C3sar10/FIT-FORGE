@@ -2,7 +2,7 @@ export interface WorkoutType {
   name: string;
   tags: string[];
   image?: string;
-  id: string;
+  id: string | null;
   description: string;
   author: string;
   type: string;

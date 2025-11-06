@@ -114,7 +114,7 @@ const page = (props: Props) => {
     // Save changes to the workout log
     const newWorkoutTimestamp =
       editedWorkoutDate !== null && editedWorkoutDate !== ""
-        ? new Date(editedWorkoutDate).toISOString()
+        ? new Date(editedWorkoutDate + "T12:00:00").toISOString()
         : null;
     const newDuration =
       editedMinutes !== null || editedSeconds !== null
@@ -128,13 +128,12 @@ const page = (props: Props) => {
       userId: data?.userId,
       createdOn: data?.createdOn,
       lastUpdated: now.toISOString(),
-
       title: editedTitle || data?.title,
       description: editedDescription || data?.description,
       notes: editedNotes || data?.notes,
       rating: editedRating || data?.rating,
       intensity: editedIntensity || data?.intensity,
-      workoutDate: editedWorkoutDate || data?.workoutDate,
+      workoutDate: newWorkoutTimestamp || data?.workoutDate,
       workoutDetails: {
         duration:
           editedMinutes !== null || editedSeconds !== null
@@ -191,6 +190,16 @@ const page = (props: Props) => {
       setEditedNotes(data.notes || "");
       setEditedIntensity(data.intensity || 0);
       setEditedRating(data.rating || 0);
+      // Initialize editedWorkoutDate with the existing workoutDate in YYYY-MM-DD format
+      if (data.workoutDate) {
+        const workoutDate = new Date(data.workoutDate);
+        // Use local date to avoid timezone shifts
+        const year = workoutDate.getFullYear();
+        const month = String(workoutDate.getMonth() + 1).padStart(2, "0");
+        const day = String(workoutDate.getDate()).padStart(2, "0");
+        const formattedDate = `${year}-${month}-${day}`;
+        setEditedWorkoutDate(formattedDate);
+      }
     }
   }, [data]);
 

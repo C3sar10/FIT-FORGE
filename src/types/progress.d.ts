@@ -12,7 +12,7 @@ export interface WorkoutLogType {
   workoutDetails: {
     workoutTimestamp: string;
     workoutTitle: string;
-    workoutId?: string;
+    workoutId: string | null;
     duration: string | number;
     exerciseList: WorkoutBlockItem[]; //list of exercises in the workout
     exercisesCompleted: string[]; //ids of exercises completed in exerciseList

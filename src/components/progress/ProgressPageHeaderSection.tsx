@@ -29,6 +29,7 @@ import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { WorkoutLogType } from "@/types/progress";
 import { LogAPI } from "@/lib/api";
+import LogCard from "../ui/LogCard";
 
 type Props = {};
 
@@ -739,6 +740,15 @@ const ProgressPageHeaderSection = (props: Props) => {
             description="Avg. Workout Rating"
           />
         </div>
+      </div>
+      <div className="w-full flex flex-col gap-4">
+        <LogCard
+          img="/browse-web/workout-groups-default.webp"
+          action={() => router.push("/dash/progress/logs/workoutLogs")}
+          title="View All Logs"
+          description="Take a look at your log history"
+          icon={<ArrowRight color="#65A30D" size={28} />}
+        />
       </div>
     </>
   );

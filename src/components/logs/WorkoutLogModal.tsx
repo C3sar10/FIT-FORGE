@@ -810,10 +810,11 @@ const CustomLog: React.FC<PostWorkoutLogProps> = ({ isDone }) => {
   };
 
   const handleCustom = () => {
+    const randomId = Math.random().toString(36).substring(2, 15);
     setSelectedWorkout({
       name: "",
       tags: [],
-      id: "",
+      id: null,
       description: "",
       author: user?.id || "unknown",
       type: "",
@@ -836,6 +837,7 @@ const CustomLog: React.FC<PostWorkoutLogProps> = ({ isDone }) => {
       lastUpdated: now.toISOString(),
       description: `Workout logged on ${now.toLocaleDateString()} at ${now.toLocaleTimeString()}`,
       workoutDetails: {
+        workoutId: selectedWorkout?.id ?? null,
         workoutTimestamp: now.toISOString(),
         workoutTitle: selectedWorkout?.name ?? "",
         duration: 0,
@@ -851,9 +853,6 @@ const CustomLog: React.FC<PostWorkoutLogProps> = ({ isDone }) => {
       intensity: undefined,
       notes: "",
     };
-    if (selectedWorkout && selectedWorkout.id && selectedWorkout.id !== "") {
-      logObj.workoutDetails.workoutId = selectedWorkout.id;
-    }
     setCurrentWorkoutLog(logObj);
   };
 

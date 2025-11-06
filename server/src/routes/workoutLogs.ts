@@ -84,7 +84,9 @@ router.get("/:id", async (req, res) => {
       exercisesCompleted: log.workoutDetails?.exercisesCompleted,
       type: log.workoutDetails?.type,
       workoutTimestamp: log.workoutDetails?.workoutTimestamp.toISOString(),
-      workoutId: String(log.workoutDetails?.workoutId),
+      workoutId: log.workoutDetails?.workoutId
+        ? String(log.workoutDetails.workoutId)
+        : null,
     },
     rating: log.rating,
     intensity: log.intensity,
@@ -99,7 +101,7 @@ const CreateLogSchema = z.object({
   workoutDetails: z.object({
     workoutTimestamp: z.string().datetime(),
     workoutTitle: z.string().min(1),
-    workoutId: z.string().optional(),
+    workoutId: z.string().nullable(),
     duration: z.union([z.string(), z.number()]),
     exerciseList: z.array(
       z.object({
@@ -131,6 +133,9 @@ router.post("/", async (req, res) => {
     description: dto.description,
     workoutDetails: {
       ...dto.workoutDetails,
+      workoutId: dto.workoutDetails?.workoutId
+        ? new Types.ObjectId(dto.workoutDetails.workoutId)
+        : null,
       workoutTitle: dto.workoutDetails?.workoutTitle,
       duration: dto.workoutDetails?.duration,
       exerciseList: dto.workoutDetails?.exerciseList,
@@ -183,6 +188,9 @@ router.patch("/:id", async (req, res) => {
   // Apply partial updates
   if (dto.title) log.title = dto.title;
   if (dto.description !== undefined) log.description = dto.description;
+  if (dto.workoutDate !== undefined) {
+    log.workoutDate = dto.workoutDate ? new Date(dto.workoutDate) : undefined;
+  }
   if (dto.workoutDetails) {
     const existingDetails = log.workoutDetails;
     const newDetails = {
@@ -191,8 +199,10 @@ router.patch("/:id", async (req, res) => {
       ...(dto.workoutDetails.workoutTimestamp && {
         workoutTimestamp: new Date(dto.workoutDetails.workoutTimestamp), // Convert string to Date
       }),
-      ...(dto.workoutDetails.workoutId && {
-        workoutId: new Types.ObjectId(dto.workoutDetails.workoutId), // Convert to ObjectId
+      ...(dto.workoutDetails.workoutId !== undefined && {
+        workoutId: dto.workoutDetails.workoutId
+          ? new Types.ObjectId(dto.workoutDetails.workoutId)
+          : null,
       }),
     } as any; // Type assertion to bypass TS inference issue
     log.workoutDetails = newDetails;
@@ -213,10 +223,13 @@ router.patch("/:id", async (req, res) => {
     createdOn: out.createdOn.toISOString(),
     lastUpdated: out.lastUpdated.toISOString(),
     description: out.description,
+    workoutDate: out.workoutDate ? out.workoutDate.toISOString() : null,
     workoutDetails: {
       ...out.workoutDetails,
       workoutTimestamp: out.workoutDetails?.workoutTimestamp.toISOString(),
-      workoutId: String(out.workoutDetails?.workoutId),
+      workoutId: out.workoutDetails?.workoutId
+        ? String(out.workoutDetails.workoutId)
+        : null,
     },
     rating: out.rating,
     intensity: out.intensity,
