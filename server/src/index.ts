@@ -14,6 +14,7 @@ import workoutLogRouter from "./routes/workoutLogs"; // Add this
 import eventRouter from "./routes/events"; // Lazy to import here
 
 const app = express();
+const multer = require("multer");
 
 const allowedOrigins = [
   "http://localhost:3000",

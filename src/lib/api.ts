@@ -15,15 +15,22 @@ if (!BASE) {
 function buildInit(path: string, init: RequestInit = {}): RequestInit {
   const hasBody = typeof init.body !== "undefined" && init.body !== null;
   const headers = new Headers(init.headers || undefined);
-  if (hasBody && !headers.has("Content-Type")) {
+
+  // Only set Content-Type for JSON bodies, not FormData
+  if (
+    hasBody &&
+    !headers.has("Content-Type") &&
+    !(init.body instanceof FormData)
+  ) {
     headers.set("Content-Type", "application/json");
   }
 
-  // Add Authorization header if accessToken exists and not an auth route
+  // Add Authorization header if accessToken exists
+  // Exception: don't add auth header for login/register/refresh routes
   const accessToken =
     typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
-  const isAuthPath = path.startsWith("/auth/");
-  if (accessToken && !isAuthPath) {
+  const isPublicAuthPath = path.match(/^\/auth\/(login|register|refresh)$/);
+  if (accessToken && !isPublicAuthPath) {
     headers.set("Authorization", `Bearer ${accessToken}`);
   }
 
@@ -143,6 +150,11 @@ export const AuthAPI = {
       body: refreshToken ? JSON.stringify({ refreshToken }) : undefined,
     }).then((r) => r.json());
   },
+  uploadProfileImage: (id: string, body: FormData) =>
+    api(`/auth/${id}/profileImage`, {
+      method: "POST",
+      body,
+    }).then((r) => r.json()),
   updateUser: (body: {
     id: string;
     name?: string;

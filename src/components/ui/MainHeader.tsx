@@ -103,6 +103,7 @@ const UserMenu: React.FC<UserMenuProps> = ({ isOpen, toggleMenu }) => {
 
 const MainHeader: React.FC<Props> = ({ hasDetails }) => {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { user } = useAuth();
   const toggleUserMenu = () => {
     setMenuOpen(!menuOpen);
   };
@@ -116,7 +117,15 @@ const MainHeader: React.FC<Props> = ({ hasDetails }) => {
             onClick={toggleUserMenu}
             className="ml-4 size-[40px] flex items-center justify-center bg-lime-100 text-lime-700 rounded-full hover:border-lime-500 cursor-pointer"
           >
-            <UserRound size={32} />
+            {user && user.profilePicture?.thumbnail ? (
+              <img
+                src={user.profilePicture.thumbnail}
+                alt="Profile"
+                className="rounded-full w-full h-full object-cover"
+              />
+            ) : (
+              <UserRound size={32} />
+            )}
           </span>
           <UserMenu isOpen={menuOpen} toggleMenu={toggleUserMenu} />
         </div>

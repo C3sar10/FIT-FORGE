@@ -44,5 +44,10 @@ export interface User {
     value: number | null;
     unit: string | null;
   } | null;
+  profilePicture: {
+    original: string | null;
+    thumbnail: string | null;
+    uploadedAt: Date | null;
+  };
   schemaVersion?: number;
 }

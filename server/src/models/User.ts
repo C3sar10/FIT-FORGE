@@ -36,6 +36,15 @@ const AddressSchema = new Schema(
   { _id: false }
 );
 
+const ProfilePictureSchema = new Schema(
+  {
+    original: { type: String, required: false },
+    thumbnail: { type: String, required: false },
+    uploadedAt: { type: Date, required: false },
+  },
+  { _id: false }
+);
+
 const UserSchema = new Schema(
   {
     email: { type: String, unique: true, index: true, required: true },
@@ -56,6 +65,7 @@ const UserSchema = new Schema(
       value: { type: Number, default: null },
       unit: { type: String, enum: ["kg", "lb", ""], default: "lb" },
     },
+    profilePicture: { type: ProfilePictureSchema, default: undefined },
     schemaVersion: { type: Number, default: 1 },
   },
   { timestamps: true }

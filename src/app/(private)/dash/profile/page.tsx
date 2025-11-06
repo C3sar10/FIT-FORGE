@@ -1,8 +1,9 @@
 "use client";
 import { useAuth } from "@/context/AuthContext";
 import { AuthAPI } from "@/lib/api";
+import { User } from "@/types/auth";
 import { div } from "framer-motion/client";
-import { ArrowLeft, CheckCheck, Edit, Trash2 } from "lucide-react";
+import { ArrowLeft, CheckCheck, Edit, PlusCircle, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 
@@ -13,71 +14,151 @@ const page = (props: Props) => {
   const { user, setUser } = useAuth();
   //console.log("Current user object: ", user);
 
+  const [profilePicture, setProfilePicture] = useState<File | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [newUserData, setNewUserData] = useState({
-    id: user?.id || "",
-    name: user?.name || "",
+  const [newUserData, setNewUserData] = useState<any>({
+    id: "",
+    name: "",
     phone: {
-      e164: user?.phone?.e164 || "",
-      verified: user?.phone?.verified || false,
+      e164: "",
+      verified: false,
     },
-    gender: user?.gender || "",
-    dob: user?.dob ? new Date(user.dob).toISOString().split("T")[0] : "",
+    gender: "",
+    dob: "",
     address: {
-      street: user?.address?.street || "",
-      city: user?.address?.city || "",
-      state: user?.address?.state || "",
-      zipcode: user?.address?.zipcode || "",
-      country: user?.address?.country || "",
+      street: "",
+      city: "",
+      state: "",
+      zipcode: "",
+      country: "",
     },
     height: {
-      value: user?.height?.value || 0,
-      unit: user?.height?.unit || "",
+      value: 0,
+      unit: "",
     },
     weight: {
-      value: user?.weight?.value || 0,
-      unit: user?.weight?.unit || "",
+      value: 0,
+      unit: "",
+    },
+    profilePicture: {
+      original: null,
+      thumbnail: null,
+      uploadedAt: null,
     },
   });
+
+  // Update newUserData when user data is loaded
+  useEffect(() => {
+    if (user) {
+      setNewUserData({
+        id: user.id || "",
+        name: user.name || "",
+        phone: {
+          e164: user.phone?.e164 || "",
+          verified: user.phone?.verified || false,
+        },
+        gender: user.gender || "",
+        dob: user.dob ? new Date(user.dob).toISOString().split("T")[0] : "",
+        address: {
+          street: user.address?.street || "",
+          city: user.address?.city || "",
+          state: user.address?.state || "",
+          zipcode: user.address?.zipcode || "",
+          country: user.address?.country || "",
+        },
+        height: {
+          value: user.height?.value || 0,
+          unit: user.height?.unit || "",
+        },
+        weight: {
+          value: user.weight?.value || 0,
+          unit: user.weight?.unit || "",
+        },
+        profilePicture: {
+          original: user.profilePicture?.original || null,
+          thumbnail: user.profilePicture?.thumbnail || null,
+          uploadedAt: user.profilePicture?.uploadedAt || null,
+        },
+      });
+      setProfilePicture(null);
+    }
+  }, [user]);
 
   const handleEditClick = () => {
     setIsEditing(true);
   };
 
   const handleDiscardChanges = () => {
-    setNewUserData({
-      id: user?.id || "",
-      name: user?.name || "",
-      phone: {
-        e164: user?.phone?.e164 || "",
-        verified: user?.phone?.verified || false,
-      },
-      gender: user?.gender || "",
-      dob: user?.dob ? new Date(user.dob).toISOString().split("T")[0] : "",
-      address: {
-        street: user?.address?.street || "",
-        city: user?.address?.city || "",
-        state: user?.address?.state || "",
-        zipcode: user?.address?.zipcode || "",
-        country: user?.address?.country || "",
-      },
-      height: {
-        value: user?.height?.value || 0,
-        unit: user?.height?.unit || "",
-      },
-      weight: {
-        value: user?.weight?.value || 0,
-        unit: user?.weight?.unit || "",
-      },
-    });
+    if (user) {
+      setNewUserData({
+        id: user.id || "",
+        name: user.name || "",
+        phone: {
+          e164: user.phone?.e164 || "",
+          verified: user.phone?.verified || false,
+        },
+        gender: user.gender || "",
+        dob: user.dob ? new Date(user.dob).toISOString().split("T")[0] : "",
+        address: {
+          street: user.address?.street || "",
+          city: user.address?.city || "",
+          state: user.address?.state || "",
+          zipcode: user.address?.zipcode || "",
+          country: user.address?.country || "",
+        },
+        height: {
+          value: user.height?.value || 0,
+          unit: user.height?.unit || "",
+        },
+        weight: {
+          value: user.weight?.value || 0,
+          unit: user.weight?.unit || "",
+        },
+        profilePicture: {
+          original: user.profilePicture?.original || null,
+          thumbnail: user.profilePicture?.thumbnail || null,
+          uploadedAt: user.profilePicture?.uploadedAt || null,
+        },
+      });
+    }
+    setProfilePicture(null);
     setIsEditing(false);
   };
 
   const handleSaveUpdate = async () => {
+    // Ensure we have a valid user ID before making API calls
+    if (!user?.id || !newUserData.id) {
+      console.error("Cannot save: user ID is missing");
+      return;
+    }
+    if (profilePicture) {
+      try {
+        // Upload profile picture logic here
+        const formData = new FormData();
+        formData.append("profilePicture", profilePicture);
+        // Use user.id instead of user?.id || "" to ensure we have a valid ID
+        const res = await AuthAPI.uploadProfileImage(user.id, formData);
+        if (res) {
+          console.log("Response of profile picture update user: ", res.user);
+          setProfilePicture(null);
+        }
+      } catch (error) {
+        console.error("Failed to upload profile picture:", error);
+      }
+    }
     if (newUserData) {
       // Call API to update user data
       try {
-        const res = await AuthAPI.updateUser(newUserData);
+        const res = await AuthAPI.updateUser({
+          id: newUserData.id,
+          name: newUserData.name,
+          phone: newUserData.phone,
+          gender: newUserData.gender,
+          dob: newUserData.dob,
+          address: newUserData.address,
+          height: newUserData.height,
+          weight: newUserData.weight,
+        });
         console.log("User updated successfully:", res);
         if (res && res.user) {
           setNewUserData({
@@ -106,6 +187,11 @@ const page = (props: Props) => {
               value: res.user.weight?.value || 0,
               unit: res.user.weight?.unit || "",
             },
+            profilePicture: {
+              original: res.user.profilePicture?.original || null,
+              thumbnail: res.user.profilePicture?.thumbnail || null,
+              uploadedAt: res.user.profilePicture?.uploadedAt || null,
+            },
           });
           setUser(res.user);
         }
@@ -113,6 +199,7 @@ const page = (props: Props) => {
         console.error("Failed to update user:", error);
       }
     }
+
     // Implement save logic here
     setIsEditing(false);
   };
@@ -129,7 +216,37 @@ const page = (props: Props) => {
         <h1 className="text-2xl font-bold">Profile</h1>
       </div>
       <div className="w-full flex flex-col items-center gap-4 py-4 border-b border-neutral-200">
-        <div className="size-[240px] lg:size-[300px] rounded-full bg-neutral-400 border border-neutral-200 flex items-center justify-center"></div>
+        <div className="size-[240px] lg:size-[300px] rounded-full bg-neutral-400 border border-neutral-200 flex items-center justify-center">
+          {profilePicture && (
+            <img
+              src={URL.createObjectURL(profilePicture)}
+              alt="Profile"
+              className="rounded-full w-full h-full object-cover"
+            />
+          )}
+          {!profilePicture && user?.profilePicture?.original && (
+            <img
+              src={user.profilePicture.original}
+              alt="Profile"
+              className="rounded-full w-full h-full object-cover "
+            />
+          )}
+        </div>
+        {isEditing && (
+          <div className="flex items-center justify-center w-full max-w-[300px] mx-auto gap-2 p-4">
+            <input
+              type="file"
+              placeholder="Upload Profile Picture"
+              onChange={(e) => {
+                if (e.target.files && e.target.files[0]) {
+                  setProfilePicture(e.target.files[0]);
+                }
+              }}
+              accept="image/*"
+              className="w-full items-center justify-center text-center cursor-pointer px-4 py-2 border border-neutral-200 rounded-md"
+            />
+          </div>
+        )}
         <div className="w-full flex items-center justify-between gap-2">
           <p className="text-lg font-medium">Personal Details</p>
           {isEditing ? (

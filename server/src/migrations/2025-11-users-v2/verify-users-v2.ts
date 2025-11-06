@@ -15,6 +15,7 @@ import mongoose from "mongoose";
       { gender: { $exists: false } },
       { height: { $exists: false } },
       { weight: { $exists: false } },
+      { profilePicture: { $exists: false } },
     ],
   });
   console.log({
@@ -37,6 +38,7 @@ import mongoose from "mongoose";
           gender: 1,
           height: 1,
           weight: 1,
+          profilePicture: 1,
         },
       },
     ])

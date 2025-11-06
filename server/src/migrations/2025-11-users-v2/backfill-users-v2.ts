@@ -28,6 +28,12 @@ function v2PatchFor(doc: any) {
       value: null,
       unit: null,
     };
+  if (!doc.profilePicture)
+    patch.profilePicture = {
+      original: null,
+      thumbnail: null,
+      uploadedAt: null,
+    };
 
   return patch;
 }
@@ -50,6 +56,7 @@ function v2PatchFor(doc: any) {
       { gender: { $exists: false } },
       { height: { $exists: false } },
       { weight: { $exists: false } },
+      { profilePicture: { $exists: false } },
     ],
     ...(lastId ? { _id: { $gt: lastId } } : {}),
   };
@@ -67,6 +74,7 @@ function v2PatchFor(doc: any) {
           gender: 1,
           height: 1,
           weight: 1,
+          profilePicture: 1,
           schemaVersion: 1,
         },
       })
@@ -86,6 +94,7 @@ function v2PatchFor(doc: any) {
             { gender: { $exists: false } },
             { height: { $exists: false } },
             { weight: { $exists: false } },
+            { profilePicture: { $exists: false } },
           ],
         },
         update: { $set: v2PatchFor(doc) },

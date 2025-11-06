@@ -1,14 +1,45 @@
-import { Router } from "express";
+import { Router, Request } from "express";
 import { z } from "zod";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
-
 import User from "../models/User";
 import { signAccess, signRefresh, verifyRefresh } from "../lib/jwt";
 import { env } from "../config/env";
 import { ApiError, errors } from "../utils/ApiError";
+import { requireAuth } from "../middleware/requireAuth";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import dotenv from "dotenv";
+import sharp from "sharp";
 
+dotenv.config();
 const router = Router();
+const multer = require("multer");
+
+const BUCKET_NAME = process.env.PROFILE_BUCKET_NAME!;
+const BUCKET_REGION = process.env.PROFILE_BUCKET_REGION!;
+const ACCESS_KEY = process.env.PROFILE_ACCESS_KEY!;
+const SECRET_ACCESS_KEY = process.env.PROFILE_SECRET_ACCESS_KEY!;
+
+const s3 = new S3Client({
+  region: BUCKET_REGION,
+  credentials: {
+    accessKeyId: ACCESS_KEY,
+    secretAccessKey: SECRET_ACCESS_KEY,
+  },
+});
+
+// Type for multer request
+interface MulterRequest extends Request {
+  file?: {
+    originalname: string;
+    mimetype: string;
+    size: number;
+    buffer: Buffer;
+  };
+}
+
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
 
 // --- schemas
 const RegisterSchema = z.object({
@@ -41,6 +72,7 @@ router.post("/register", async (req, res) => {
     gender: null,
     height: null,
     weight: null,
+    profilePicture: null,
     schemaVersion: 2,
   });
 
@@ -61,6 +93,7 @@ router.post("/register", async (req, res) => {
       gender: user.gender,
       height: user.height,
       weight: user.weight,
+      profilePicture: user.profilePicture,
     },
     accessToken: access,
     refreshToken: refresh,
@@ -93,6 +126,7 @@ router.post("/login", async (req, res) => {
       gender: user.gender,
       height: user.height,
       weight: user.weight,
+      profilePicture: user.profilePicture,
     },
     accessToken: access,
     refreshToken: refresh,
@@ -109,7 +143,7 @@ router.get("/me", async (req, res) => {
 
     const { verifyAccess } = await import("../lib/jwt");
     const payload = verifyAccess(access);
-    const user = await User.findById(payload.sub).select("name email");
+    const user = await User.findById(payload.sub);
     return res.json({
       user: user
         ? {
@@ -122,6 +156,7 @@ router.get("/me", async (req, res) => {
             gender: user.gender,
             height: user.height,
             weight: user.weight,
+            profilePicture: user.profilePicture,
           }
         : null,
     });
@@ -216,13 +251,23 @@ router.post("/refresh", async (req, res) => {
       gender: user.gender,
       height: user.height,
       weight: user.weight,
+      profilePicture: user.profilePicture,
     },
   });
 });
 
-router.patch("/:id", async (req, res) => {
+router.patch("/:id", requireAuth, async (req, res) => {
   const { id } = req.params;
   const updates = req.body;
+  const userId = (req as any).user.userId as string;
+
+  // Ensure user can only update their own profile
+  if (id !== userId) {
+    return res
+      .status(403)
+      .json({ error: "Forbidden: Can only update your own profile" });
+  }
+
   try {
     const user = await User.findByIdAndUpdate(id, updates, { new: true });
     if (!user) {
@@ -233,6 +278,85 @@ router.patch("/:id", async (req, res) => {
     res.status(400).json({ error: "Failed to update user" });
   }
 });
+
+router.post(
+  "/:id/profileImage",
+  requireAuth,
+  upload.single("profilePicture"),
+  async (req: MulterRequest, res) => {
+    try {
+      const { id } = req.params;
+      const userId = (req as any).user.userId as string;
+
+      // Ensure user can only upload to their own profile
+      if (id !== userId) {
+        return res
+          .status(403)
+          .json({ error: "Forbidden: Can only upload to your own profile" });
+      }
+
+      console.log("Request body: ", req.body);
+      console.log("Request file: ", req.file);
+
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+      const params = {
+        Bucket: BUCKET_NAME,
+        Key: `profile-images/${id}/profilePicture`,
+        Body: req.file.buffer,
+        ContentType: req.file.mimetype,
+      };
+
+      const bufferSmall = await sharp(req.file.buffer)
+        .resize({ width: 100, height: 100, fit: "cover" })
+        .toBuffer();
+
+      const params2 = {
+        Bucket: BUCKET_NAME,
+        Key: `profile-images/${id}/profilePicture-small`,
+        Body: bufferSmall,
+        ContentType: req.file.mimetype,
+      };
+
+      const command = new PutObjectCommand(params);
+      const command2 = new PutObjectCommand(params2);
+      await s3.send(command);
+      await s3.send(command2);
+
+      // Construct URLs for the uploaded images
+      const originalUrl = `https://${BUCKET_NAME}.s3.${BUCKET_REGION}.amazonaws.com/${params.Key}`;
+      const thumbnailUrl = `https://${BUCKET_NAME}.s3.${BUCKET_REGION}.amazonaws.com/${params2.Key}`;
+
+      // Update user profile with image URLs in database
+      const updatedUser = await User.findByIdAndUpdate(
+        id,
+        {
+          profilePicture: {
+            original: originalUrl,
+            thumbnail: thumbnailUrl,
+            uploadedAt: new Date(),
+          },
+        },
+        { new: true }
+      );
+
+      res.json({
+        success: true,
+        message: "Profile image uploaded successfully",
+        profilePicture: {
+          original: originalUrl,
+          thumbnail: thumbnailUrl,
+          uploadedAt: new Date(),
+        },
+        user: updatedUser,
+      });
+    } catch (error) {
+      console.error("Profile image upload error:", error);
+      res.status(500).json({ error: "Failed to upload profile image" });
+    }
+  }
+);
 
 router.post("/logout", async (req, res) => {
   const { refreshToken } = req.body; // Expect refresh token in body
