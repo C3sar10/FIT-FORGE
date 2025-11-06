@@ -20,11 +20,32 @@ const page = (props: Props) => {
 
   const router = useRouter();
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+
   const { isLoading: isMyExercisesLoading, data: myExercises } = useQuery({
     queryKey: ["myExercises"],
     queryFn: async () => {
       const res = await fetchMine();
       return res.items;
+    },
+  });
+
+  const { data: searchExercises, isLoading: isSearchLoading } = useQuery({
+    queryKey: ["searchExercises", searchQuery],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        scope: "all",
+        limit: "50",
+      });
+
+      if (searchQuery.trim()) {
+        params.append("query", searchQuery.trim());
+      }
+
+      const res = await api(`/exercises?${params.toString()}`);
+      const data = await res.json();
+      return data.items ?? [];
     },
   });
 
@@ -66,8 +87,14 @@ const page = (props: Props) => {
         />
         <ActionButton name="Modify Existing" Icon={Edit} />
       </div>
-      <MainSearchInput />
-      {myExercises && myExercises.length > 0 && (
+      <MainSearchInput
+        placeholder="Search for exercises"
+        onSearch={(query) => {
+          setSearchQuery(query);
+          setIsSearching(query.trim().length > 0);
+        }}
+      />
+      {!isSearching && myExercises && myExercises.length > 0 && (
         <div className="w-full flex flex-col gap-4 items-start">
           <h2 className="font-medium px-4">Custom Made</h2>
           <div className="px-4 pb-4 w-full grid grid-cols-1 min-[375px]:grid-cols-2 md:grid-cols-3 gap-4">
@@ -86,9 +113,33 @@ const page = (props: Props) => {
       )}
 
       <div className="w-full flex flex-col gap-4 items-start">
-        <h2 className="font-medium px-4">Library</h2>
+        {!isSearching && <h2 className="font-medium px-4">Library</h2>}
+
         <div className="px-4 pb-4 w-full grid grid-cols-1 min-[375px]:grid-cols-2 md:grid-cols-3 gap-4">
-          {isLibraryExercisesLoading ? (
+          {isSearching ? (
+            isSearchLoading ? (
+              <>
+                <div className="col-span-full text-center py-4">
+                  Searching...
+                </div>
+              </>
+            ) : searchExercises && searchExercises.length > 0 ? (
+              searchExercises.map((item: ExerciseType, index: number) => (
+                <SmallBrowseCards
+                  key={index}
+                  title={item.title}
+                  subtitle={item.type}
+                  imgUrl={item.image}
+                  action={true}
+                  route={`/exercisepreview/${item.id}`}
+                />
+              ))
+            ) : (
+              <div className="col-span-full text-center py-4 ">
+                No exercises found for "{searchQuery}"
+              </div>
+            )
+          ) : isLibraryExercisesLoading ? (
             <>Loading...</>
           ) : (
             libraryExercises &&
