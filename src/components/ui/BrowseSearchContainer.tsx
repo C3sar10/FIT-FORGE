@@ -107,7 +107,7 @@ const BrowseSearchContainer = (props: Props) => {
       {!isSearching && customWorkouts && customWorkouts.length > 0 && (
         <div className="px-4 pb-4 w-full flex flex-col items-start gap-2">
           <h2 className="font-medium ">Custom Made</h2>
-          <div className=" w-full flex items-center gap-4 overflow-x-scroll no-scrollbar h-[150px] min-[375px]:h-[180px] md:h-[200px]">
+          <div className="pb-4 w-full grid grid-cols-1 min-[375px]:grid-cols-2 md:grid-cols-3 gap-4">
             {isCustomLoading
               ? Array(4)
                   .fill(0)
