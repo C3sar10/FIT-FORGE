@@ -8,6 +8,7 @@ import { useTimer } from "@/context/TimerContext";
 import { useWorkoutGlobal } from "@/context/WorkoutContext";
 import { api, http } from "@/lib/api";
 import { ExerciseType, WorkoutType } from "@/types/workout";
+import { useFavoriteWorkouts } from "@/hooks/useFavoriteWorkouts";
 import {
   ArrowLeft,
   Check,
@@ -63,9 +64,11 @@ interface HeaderProps {
   title: string;
   tags: string[];
   imageUrl?: string;
-  id: string;
+  id: string | null;
   description: string;
   author: string;
+  favorite: boolean;
+  toggleFavorite: () => void;
 }
 const StartWorkoutHeader: React.FC<HeaderProps> = ({
   title = "Workout",
@@ -74,8 +77,11 @@ const StartWorkoutHeader: React.FC<HeaderProps> = ({
   id,
   description = "",
   author = "FitForge",
+  favorite = false,
+  toggleFavorite,
 }) => {
   const router = useRouter();
+
   return (
     <div className="w-full h-auto aspect-square md:aspect-video bg-neutral-200 flex flex-col justify-end relative">
       {imageUrl && (
@@ -116,7 +122,12 @@ const StartWorkoutHeader: React.FC<HeaderProps> = ({
           </div>
         </div>
         <div className="flex items-center flex-wrap gap-4">
-          <Heart size={24} />
+          {favorite ? (
+            <Heart onClick={toggleFavorite} fill="red" size={40} />
+          ) : (
+            <Heart onClick={toggleFavorite} size={40} />
+          )}
+
           <Download size={24} />
         </div>
       </div>
@@ -151,9 +162,9 @@ const StartWorkoutBody = ({
   onDeleted,
 }: {
   exerciseList: ExerciseType[];
-  workout: WorkoutType & { id: string };
+  workout: WorkoutType;
   canEdit: boolean;
-  onUpdated: (next: WorkoutType & { id: string }) => void;
+  onUpdated: (next: WorkoutType) => void;
   onDeleted: () => void;
 }) => {
   const {
@@ -266,12 +277,11 @@ const StartWorkoutBody = ({
     if (currWorkoutId === null) {
       setPlayerState("play");
       setCurrWorkoutId(workout.id);
-      if (state.status === "idle") start(workout.id);
+      if (state.status === "idle" && workout.id) start(workout.id);
       router.back();
       toggleWorkoutPlayer();
     }
   };
-
   const startEdit = () => {
     if (!canEdit) return;
     setIsEditing(true);
@@ -606,6 +616,9 @@ const page = () => {
   const router = useRouter();
   const queryClient = useQueryClient(); // Add this to fix error 1
 
+  // Use the favorites hook
+  const { isFavorite, toggleFavorite } = useFavoriteWorkouts();
+
   // Fetch workout
   const {
     data: workoutData,
@@ -624,6 +637,7 @@ const page = () => {
   useEffect(() => {
     if (workoutData) {
       setCurrWorkout(workoutData);
+
       const fetchExercises = async () => {
         const flatIds = (workoutData.blocks ?? []).flatMap((b: any) =>
           (b.items ?? []).map((i: any) => i.exerciseId)
@@ -691,7 +705,7 @@ const page = () => {
     myId &&
     String(currWorkout.author) === String(myId);
 
-  const handleUpdated = (next: WorkoutType & { id: string }) => {
+  const handleUpdated = (next: WorkoutType) => {
     setCurrWorkout(next);
     // refresh the list view
     const flat: ExerciseType[] = (next.blocks ?? []).flatMap((b: any) =>
@@ -724,6 +738,12 @@ const page = () => {
           author={
             currWorkout.author === "global" ? "FitForge" : user?.name ?? "You"
           }
+          favorite={currWorkout.id ? isFavorite(currWorkout.id) : false}
+          toggleFavorite={() => {
+            if (currWorkout.id) {
+              toggleFavorite(currWorkout.id, isFavorite(currWorkout.id));
+            }
+          }}
         />
         <StartWorkoutBody
           exerciseList={exerciseList}

@@ -6,7 +6,7 @@ type Props = {
   title: string;
   tags: string[];
   imageUrl?: string;
-  id: string;
+  id: string | null;
   isWorkout: boolean;
   isExercise: boolean;
 };

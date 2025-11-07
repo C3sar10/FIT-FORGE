@@ -127,6 +127,7 @@ router.post("/login", async (req, res) => {
       height: user.height,
       weight: user.weight,
       profilePicture: user.profilePicture,
+      favoriteWorkouts: user.favoriteWorkouts,
     },
     accessToken: access,
     refreshToken: refresh,
@@ -157,6 +158,7 @@ router.get("/me", async (req, res) => {
             height: user.height,
             weight: user.weight,
             profilePicture: user.profilePicture,
+            favoriteWorkouts: user.favoriteWorkouts,
           }
         : null,
     });
@@ -252,6 +254,7 @@ router.post("/refresh", async (req, res) => {
       height: user.height,
       weight: user.weight,
       profilePicture: user.profilePicture,
+      favoriteWorkouts: user.favoriteWorkouts,
     },
   });
 });
@@ -377,6 +380,53 @@ router.post("/logout", async (req, res) => {
     }
   }
   res.json({ ok: true });
+});
+
+// Add/remove workout from user favorites
+router.post("/favorites/workouts/:workoutId", requireAuth, async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const { workoutId } = req.params;
+  const { action } = req.body; // 'add' or 'remove'
+
+  try {
+    if (action === "add") {
+      await User.updateOne(
+        { _id: userId },
+        { $addToSet: { favoriteWorkouts: workoutId } } // $addToSet prevents duplicates
+      );
+    } else if (action === "remove") {
+      await User.updateOne(
+        { _id: userId },
+        { $pull: { favoriteWorkouts: workoutId } }
+      );
+    } else {
+      return res
+        .status(400)
+        .json({ error: "Invalid action. Use 'add' or 'remove'" });
+    }
+
+    // Get updated user favorites
+    const user = await User.findById(userId, { favoriteWorkouts: 1 });
+    const isFavorite = user?.favoriteWorkouts?.includes(workoutId) || false;
+
+    res.json({ ok: true, isFavorite });
+  } catch (error) {
+    console.error("Error updating workout favorites:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Get user's favorite workouts
+router.get("/favorites/workouts", requireAuth, async (req, res) => {
+  const userId = (req as any).user.userId as string;
+
+  try {
+    const user = await User.findById(userId, { favoriteWorkouts: 1 });
+    res.json({ favoriteWorkouts: user?.favoriteWorkouts || [] });
+  } catch (error) {
+    console.error("Error fetching workout favorites:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 export default router;

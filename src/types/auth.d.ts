@@ -49,5 +49,6 @@ export interface User {
     thumbnail: string | null;
     uploadedAt: Date | null;
   };
+  favoriteWorkouts?: string[];
   schemaVersion?: number;
 }

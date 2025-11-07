@@ -5,6 +5,8 @@ export const WorkoutBrowseDefault = [
     title: "My Favorites",
     icon: Heart,
     imgUrl: "/browse-web/favorites-default.webp",
+    routeUrl: "/dash/workouts/favorites",
+    action: true,
   },
   {
     title: "New Workout",

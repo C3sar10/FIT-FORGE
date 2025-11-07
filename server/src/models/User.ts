@@ -66,6 +66,7 @@ const UserSchema = new Schema(
       unit: { type: String, enum: ["kg", "lb", ""], default: "lb" },
     },
     profilePicture: { type: ProfilePictureSchema, default: undefined },
+    favoriteWorkouts: { type: [String], default: [] }, // Array of workout IDs
     schemaVersion: { type: Number, default: 1 },
   },
   { timestamps: true }

@@ -40,7 +40,7 @@ const SmallBrowseCards: React.FC<CardProps> = ({
   return (
     <div
       onClick={handleAction}
-      className={`aspect-[3/2] relative h-full w-auto cursor-pointer bg-linear-180 from-black to-lime-500 rounded-md border `}
+      className={`aspect-[3/2] relative h-full w-auto cursor-pointer bg-linear-180 from-black to-lime-500 rounded-md border overflow-hidden`}
     >
       {imgUrl && (
         <img
