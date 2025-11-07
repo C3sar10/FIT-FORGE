@@ -376,78 +376,88 @@ const page = (props: Props) => {
   }, [user, route]);
 
   return (
-    <PageContainer>
-      <Alert
-        open={!!errorMsg}
-        onClose={() => setErrorMsg(null)}
-        title="Oops!"
-        message={errorMsg ?? ""}
-        variant="error"
-        autoCloseMs={4000}
-      />
-      <MainHeader hasDetails={false} />
-      <div className="w-full px-4 pt-6 sm:pt-8 flex flex-col gap-4 items-center max-w-[520px] mx-auto">
-        <div className="flex flex-col w-full text-center gap-2">
-          <h1 className="text-3xl sm:text-5xl text-center">
-            {isLogin ? "Welcome Back!" : "Welcome to FitForge!"}
-          </h1>
-          <p className="py-3 sm:py-4 text-base sm:text-lg text-pretty">
-            {isLogin
-              ? "Let's keep crushing your health & fitness goals"
-              : "Register to start your health & fitness journey with us."}
-          </p>
-        </div>
+    <div className="w-full h-screen overflow-hidden flex flex-col min-[1200px]:flex-row">
+      <div className="relative w-full h-full min-h-dvh overflow-y-auto mx-auto my-0 flex flex-col max-w-[900px] min-[1200px]:max-w-[700px]">
+        <Alert
+          open={!!errorMsg}
+          onClose={() => setErrorMsg(null)}
+          title="Oops!"
+          message={errorMsg ?? ""}
+          variant="error"
+          autoCloseMs={4000}
+        />
+        <MainHeader hasDetails={false} />
+        <div className="w-full px-4 pt-6 sm:pt-8 flex flex-col gap-4 items-center max-w-[520px] mx-auto">
+          <div className="flex flex-col w-full text-center gap-2">
+            <h1 className="text-3xl sm:text-5xl text-center">
+              {isLogin ? "Welcome Back!" : "Welcome to FitForge!"}
+            </h1>
+            <p className="py-3 sm:py-4 text-base sm:text-lg text-pretty">
+              {isLogin
+                ? "Let's keep crushing your health & fitness goals"
+                : "Register to start your health & fitness journey with us."}
+            </p>
+          </div>
 
-        <SegmentedAuthToggle isLogin={isLogin} setIsLogin={setIsLogin} />
+          <SegmentedAuthToggle isLogin={isLogin} setIsLogin={setIsLogin} />
 
-        <form
-          onSubmit={handleFormSubmit}
-          className="w-full flex flex-col gap-3 sm:gap-4 items-center mt-6 sm:mt-8"
-        >
-          {isLogin ? (
-            <LoginForm
-              userName={userName}
-              setUserName={setUserName}
-              userEmail={userEmail}
-              setUserEmail={setUserEmail}
-              userPassword={userPassword}
-              setUserPassword={setUserPassword}
-              userConfirmPassword={userConfirmPassword}
-              setUserConfirmPassword={setUserConfirmPassword}
-              rememberMe={rememberMe}
-              setRememberMe={setRememberMe}
-            />
-          ) : (
-            <SignUpForm
-              userName={userName}
-              setUserName={setUserName}
-              userEmail={userEmail}
-              setUserEmail={setUserEmail}
-              userPassword={userPassword}
-              setUserPassword={setUserPassword}
-              userConfirmPassword={userConfirmPassword}
-              setUserConfirmPassword={setUserConfirmPassword}
-              rememberMe={rememberMe}
-              setRememberMe={setRememberMe}
-            />
-          )}
-
-          <button
-            disabled={submitting}
-            type="submit"
-            className="w-full h-14 sm:h-20 rounded-full mt-6 sm:mt-8 text-base md:text-lg cursor-pointer flex items-center justify-center text-center bg-black hover:bg-black/80 text-white font-semibold tracking-wide"
+          <form
+            onSubmit={handleFormSubmit}
+            className="w-full flex flex-col gap-3 sm:gap-4 items-center mt-6 sm:mt-8"
           >
-            {isLogin
-              ? submitting
-                ? "Logging In..."
-                : "Login"
-              : submitting
-              ? "Creating Account..."
-              : "Sign up"}
-          </button>
-        </form>
+            {isLogin ? (
+              <LoginForm
+                userName={userName}
+                setUserName={setUserName}
+                userEmail={userEmail}
+                setUserEmail={setUserEmail}
+                userPassword={userPassword}
+                setUserPassword={setUserPassword}
+                userConfirmPassword={userConfirmPassword}
+                setUserConfirmPassword={setUserConfirmPassword}
+                rememberMe={rememberMe}
+                setRememberMe={setRememberMe}
+              />
+            ) : (
+              <SignUpForm
+                userName={userName}
+                setUserName={setUserName}
+                userEmail={userEmail}
+                setUserEmail={setUserEmail}
+                userPassword={userPassword}
+                setUserPassword={setUserPassword}
+                userConfirmPassword={userConfirmPassword}
+                setUserConfirmPassword={setUserConfirmPassword}
+                rememberMe={rememberMe}
+                setRememberMe={setRememberMe}
+              />
+            )}
+
+            <button
+              disabled={submitting}
+              type="submit"
+              className="w-full h-14 sm:h-20 rounded-full mt-6 sm:mt-8 text-base md:text-lg cursor-pointer flex items-center justify-center text-center bg-black hover:bg-black/80 text-white font-semibold tracking-wide"
+            >
+              {isLogin
+                ? submitting
+                  ? "Logging In..."
+                  : "Login"
+                : submitting
+                ? "Creating Account..."
+                : "Sign up"}
+            </button>
+          </form>
+        </div>
       </div>
-    </PageContainer>
+      <div className="hidden relative min-[1200px]:flex min-[1200px]:grow overflow-hidden h-full w-full ">
+        <div className="absolute w-full h-full z-0 inset-0 bg-lime-500/50"></div>
+        <img
+          src="/workouts/full-a.jpg"
+          alt="FitForge"
+          className="object-cover w-full h-full"
+        />
+      </div>
+    </div>
   );
 };
 
