@@ -56,7 +56,11 @@ const UserSchema = new Schema(
     phone: { type: PhoneSchema, default: undefined },
     address: { type: AddressSchema, default: undefined },
     dob: { type: Date, default: null },
-    gender: { type: String, enum: ["male", "female", "other"], default: null },
+    gender: {
+      type: String,
+      enum: ["male", "female", "other", ""],
+      default: null,
+    },
     height: {
       value: { type: Number, default: null },
       unit: { type: String, enum: ["cm", "in", ""], default: "in" },
