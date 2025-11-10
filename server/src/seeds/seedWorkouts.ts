@@ -11,6 +11,26 @@ type Item = {
   sets?: number;
   reps?: number | string | null;
   restSecs?: number;
+  repObj?: {
+    repType?: string;
+    repNumber?: number | null;
+    repRange?: { min: number | null; max: number | null };
+    timeRange?: {
+      min: { time: number | null; unit: string | null };
+      max: { time: number | null; unit: string | null };
+    };
+    repDuration?: { time: number | null; unit: string | null };
+    repDistance?: { distance: number | null; unit: string | null };
+    restTimeSets?: { time: number | null; unit: string | null };
+    restTimeReps?: { time: number | null; unit: string | null };
+    targetMetric?: {
+      type: string | null;
+      unit: string | null;
+      number: number | null;
+      name: string | null;
+    };
+    equipment?: string[];
+  };
 };
 
 type Block = { title?: string; items: Item[] };
@@ -42,8 +62,90 @@ async function resolveExerciseIds(
   }
 }
 
+/** Get exercise details for repObj population */
+async function getExerciseDetails(title: string) {
+  const exercise = await Exercise.findOne({
+    author: "global",
+    title: title,
+  })
+    .select("details")
+    .lean();
+
+  if (!exercise?.details) {
+    return {
+      repType: "number",
+      repNumber: null,
+      repRange: { min: null, max: null },
+      timeRange: {
+        min: { time: null, unit: null },
+        max: { time: null, unit: null },
+      },
+      repDuration: { time: null, unit: null },
+      repDistance: { distance: null, unit: null },
+      restTimeSets: { time: null, unit: null },
+      restTimeReps: { time: null, unit: null },
+      targetMetric: {
+        type: null,
+        unit: null,
+        number: null,
+        name: null,
+      },
+      equipment: [],
+    };
+  }
+
+  return {
+    repType: exercise.details.repType || "number",
+    repNumber: exercise.details.repNumber || null,
+    repRange: exercise.details.repRange || { min: null, max: null },
+    timeRange: exercise.details.timeRange || {
+      min: { time: null, unit: null },
+      max: { time: null, unit: null },
+    },
+    repDuration: exercise.details.repDuration || { time: null, unit: null },
+    repDistance: exercise.details.repDistance || { distance: null, unit: null },
+    restTimeSets: exercise.details.restTimeSets || { time: null, unit: null },
+    restTimeReps: exercise.details.restTimeReps || { time: null, unit: null },
+    targetMetric: exercise.details.targetMetric || {
+      type: null,
+      unit: null,
+      number: null,
+      name: null,
+    },
+    equipment: exercise.details.equipment || [],
+  };
+}
+
 /** Build a Mongo-ready workout doc from a WSeed */
-function buildWorkoutDoc(seed: WSeed, titleToId: Map<string, Types.ObjectId>) {
+async function buildWorkoutDoc(
+  seed: WSeed,
+  titleToId: Map<string, Types.ObjectId>
+) {
+  const blocksWithRepObj = [];
+
+  for (const b of seed.blocks) {
+    const itemsWithRepObj = [];
+
+    for (const it of b.items) {
+      // Get exercise details if not provided in seed
+      const repObj = it.repObj || (await getExerciseDetails(it.t));
+
+      itemsWithRepObj.push({
+        name: it.t,
+        exerciseId: titleToId.get(it.t)!,
+        sets: it.sets,
+        reps: it.reps,
+        restSecs: it.restSecs,
+        repObj: repObj,
+      });
+    }
+
+    blocksWithRepObj.push({
+      title: b.title,
+      items: itemsWithRepObj,
+    });
+  }
+
   return {
     userId: "global",
     author: "global",
@@ -53,16 +155,8 @@ function buildWorkoutDoc(seed: WSeed, titleToId: Map<string, Types.ObjectId>) {
     tags: seed.tags ?? [],
     isFavorite: false,
     image: seed.image,
-    blocks: seed.blocks.map((b) => ({
-      title: b.title,
-      items: b.items.map((it) => ({
-        name: it.t,
-        exerciseId: titleToId.get(it.t)!,
-        sets: it.sets,
-        reps: it.reps,
-        restSecs: it.restSecs,
-      })),
-    })),
+    blocks: blocksWithRepObj,
+    schemaVersion: 2,
   };
 }
 
@@ -347,7 +441,7 @@ async function main() {
 
   let upserted = 0;
   for (const w of WORKOUTS) {
-    const doc = buildWorkoutDoc(w, titleToId);
+    const doc = await buildWorkoutDoc(w, titleToId);
 
     const res = await Workout.updateOne(
       { name: doc.name, author: "global" }, // idempotent key
@@ -360,6 +454,7 @@ async function main() {
           blocks: doc.blocks,
           userId: "global",
           author: "global",
+          schemaVersion: 2,
         },
         $setOnInsert: {
           isFavorite: false,

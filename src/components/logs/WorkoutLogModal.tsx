@@ -54,23 +54,27 @@ function Modal({
 
 interface ExerciseLogLiProps {
   complete: boolean;
-  exerciseObject: WorkoutBlockItem;
+  exerciseLogEntry: import("@/types/progress").ExerciseLogEntry; // Enhanced log entry
 }
 
 const ExerciseLogLi: React.FC<ExerciseLogLiProps> = ({
   complete,
-  exerciseObject,
+  exerciseLogEntry,
 }) => {
   const { theme, setTheme, resolvedTheme } = useTheme();
   const [isLight, setIsLight] = useState(theme === "light");
   const [showMenu, setShowMenu] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [isComplete, setIsComplete] = useState(complete);
   const { setCurrentWorkoutLog, currentWorkoutLog } = useLogGlobal();
-  //console.log("Current Log in Li: ", currentWorkoutLog);
-  //console.log("Exercise Object: ", exerciseObject);
-  const [exercise, setExercise] = useState<WorkoutBlockItem | null>(
-    exerciseObject
-  );
+  const [exercise, setExercise] = useState<WorkoutBlockItem | null>({
+    exerciseId: exerciseLogEntry.exerciseId,
+    name: exerciseLogEntry.name,
+    sets: exerciseLogEntry.plannedSets,
+    reps: exerciseLogEntry.plannedReps,
+    restSecs: exerciseLogEntry.plannedRestSecs,
+  });
   const [fullExercise, setFullExercise] = useState<ExerciseType | null>(null);
 
   useEffect(() => {
@@ -81,22 +85,124 @@ const ExerciseLogLi: React.FC<ExerciseLogLiProps> = ({
 
   const toggleComplete = () => {
     if (!currentWorkoutLog) return;
+
+    // Update both the exercisesCompleted array and the exercise log entry
+    const updatedExerciseList =
+      currentWorkoutLog.workoutDetails.exerciseList.map((entry) => {
+        if (entry.exerciseId === exerciseLogEntry.exerciseId) {
+          return { ...entry, completed: !isComplete };
+        }
+        return entry;
+      });
+
+    const exercisesCompleted = !isComplete
+      ? [
+          ...currentWorkoutLog.workoutDetails.exercisesCompleted,
+          exerciseLogEntry.exerciseId,
+        ]
+      : currentWorkoutLog.workoutDetails.exercisesCompleted.filter(
+          (id) => id !== exerciseLogEntry.exerciseId
+        );
+
     setCurrentWorkoutLog({
       ...currentWorkoutLog,
       workoutDetails: {
         ...currentWorkoutLog.workoutDetails,
-        exercisesCompleted: isComplete
-          ? currentWorkoutLog?.workoutDetails.exercisesCompleted.filter(
-              (id) => id !== exerciseObject.exerciseId
-            )
-          : [
-              ...currentWorkoutLog?.workoutDetails.exercisesCompleted,
-              exerciseObject.exerciseId,
-            ],
+        exerciseList: updatedExerciseList,
+        exercisesCompleted: exercisesCompleted.filter((id) => id), // Remove empty strings
       },
     });
-    // handle both types
     setIsComplete(!isComplete);
+  };
+
+  const updateSet = (
+    setIndex: number,
+    field: "reps" | "weight" | "completed",
+    value: number | boolean
+  ) => {
+    if (!currentWorkoutLog) return;
+
+    const updatedExerciseList =
+      currentWorkoutLog.workoutDetails.exerciseList.map((entry) => {
+        if (entry.exerciseId === exerciseLogEntry.exerciseId) {
+          const updatedSets = [...(entry.actualSets || [])];
+          if (updatedSets[setIndex]) {
+            updatedSets[setIndex] = {
+              ...updatedSets[setIndex],
+              [field]: value,
+            };
+          }
+          return { ...entry, actualSets: updatedSets };
+        }
+        return entry;
+      });
+
+    setCurrentWorkoutLog({
+      ...currentWorkoutLog,
+      workoutDetails: {
+        ...currentWorkoutLog.workoutDetails,
+        exerciseList: updatedExerciseList,
+      },
+    });
+  };
+
+  const addSet = () => {
+    if (!currentWorkoutLog) return;
+
+    const newSetNumber = (exerciseLogEntry.actualSets?.length || 0) + 1;
+    const newSet = {
+      setNumber: newSetNumber,
+      reps: 0,
+      weight: 0,
+      completed: false,
+      restTime: exerciseLogEntry.plannedRestSecs || 60,
+    };
+
+    const updatedExerciseList =
+      currentWorkoutLog.workoutDetails.exerciseList.map((entry) => {
+        if (entry.exerciseId === exerciseLogEntry.exerciseId) {
+          return {
+            ...entry,
+            actualSets: [...(entry.actualSets || []), newSet],
+          };
+        }
+        return entry;
+      });
+
+    setCurrentWorkoutLog({
+      ...currentWorkoutLog,
+      workoutDetails: {
+        ...currentWorkoutLog.workoutDetails,
+        exerciseList: updatedExerciseList,
+      },
+    });
+  };
+
+  const removeSet = (setIndex: number) => {
+    if (!currentWorkoutLog) return;
+
+    const updatedExerciseList =
+      currentWorkoutLog.workoutDetails.exerciseList.map((entry) => {
+        if (entry.exerciseId === exerciseLogEntry.exerciseId) {
+          const updatedSets =
+            entry.actualSets?.filter((_, index) => index !== setIndex) || [];
+          // Renumber sets
+          const renumberedSets = updatedSets.map((set, index) => ({
+            ...set,
+            setNumber: index + 1,
+          }));
+          return { ...entry, actualSets: renumberedSets };
+        }
+        return entry;
+      });
+
+    setCurrentWorkoutLog({
+      ...currentWorkoutLog,
+      workoutDetails: {
+        ...currentWorkoutLog.workoutDetails,
+        exerciseList: updatedExerciseList,
+      },
+    });
   };
 
   useEffect(() => {
@@ -107,9 +213,8 @@ const ExerciseLogLi: React.FC<ExerciseLogLiProps> = ({
     const fetchExercise = async () => {
       try {
         const fullExercise = await http.get(
-          `/exercises/${exerciseObject.exerciseId}`
+          `/exercises/${exerciseLogEntry.exerciseId}`
         );
-        //console.log("Full Exercise: ", fullExercise);
         setFullExercise(fullExercise);
       } catch (error) {
         console.error("Error fetching exercise: ", error);
@@ -118,49 +223,355 @@ const ExerciseLogLi: React.FC<ExerciseLogLiProps> = ({
     fetchExercise();
   }, []);
 
+  // Helper to check if exercise uses weight
+  const usesWeight =
+    fullExercise?.details?.targetMetric?.type === "weight" ||
+    fullExercise?.tags?.some((tag) =>
+      ["strength", "barbell", "dumbbell", "plates"].includes(tag.toLowerCase())
+    );
+
+  // Calculate summary stats
+  const totalSetsCompleted =
+    exerciseLogEntry?.actualSets?.filter((set) => set.completed).length || 0;
+  const totalSetsAttempted = exerciseLogEntry?.actualSets?.length || 0;
+  const totalReps =
+    exerciseLogEntry?.actualSets?.reduce(
+      (sum, set) => sum + (set.reps || 0),
+      0
+    ) || 0;
+  const maxWeight =
+    exerciseLogEntry?.actualSets?.reduce(
+      (max, set) => Math.max(max, set.weight || 0),
+      0
+    ) || 0;
+
   return (
-    <li
-      className={`w-full border border-neutral-200 rounded-md h-20 flex items-center justify-between p-2
-    
-    `}
-    >
-      <div className="flex items-center gap-4 h-full">
-        <div className="aspect-square rounded-sm bg-neutral-200 h-full w-auto"></div>
-        <div className="flex flex-col items-start">
-          <p className="text-sm sm:text-base">{fullExercise?.title}</p>
-          <p
-            className={`p-1 px-2 tracking-wider text-[10px] sm:text-xs rounded-sm border-neutral-200 border ${
-              isComplete
-                ? "text-lime-400 bg-lime-900"
-                : "text-red-400 bg-red-950"
-            }`}
+    <li className="w-full border border-neutral-200 rounded-md bg-neutral-50 dark:bg-neutral-800 relative">
+      {/* Exercise Header */}
+      <div
+        className="flex items-center justify-between p-3 hover:bg-neutral-100 dark:hover:bg-neutral-700 cursor-pointer"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div className="flex items-center gap-4">
+          <div className="aspect-square rounded-sm bg-neutral-200 dark:bg-neutral-600 h-12 w-12 flex-shrink-0"></div>
+          <div className="flex flex-col items-start">
+            <p className="text-sm sm:text-base font-medium">
+              {fullExercise?.title || exerciseLogEntry?.name}
+            </p>
+            <div className="flex items-center gap-2">
+              <p
+                className={`px-2 py-1 text-xs rounded-full ${
+                  isComplete
+                    ? "text-lime-600 bg-lime-100 dark:text-lime-400 dark:bg-lime-900"
+                    : "text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-900"
+                }`}
+              >
+                {isComplete ? "Complete" : "Incomplete"}
+              </p>
+              {/* Quick Stats */}
+              {exerciseLogEntry && totalSetsAttempted > 0 && (
+                <div className="flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-400">
+                  <span>
+                    {totalSetsCompleted}/{totalSetsAttempted} sets
+                  </span>
+                  <span>•</span>
+                  <span>{totalReps} reps total</span>
+                  {usesWeight && maxWeight > 0 && (
+                    <>
+                      <span>•</span>
+                      <span>
+                        Max: {maxWeight}{" "}
+                        {fullExercise?.details?.targetMetric?.unit || "lbs"}
+                      </span>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* Quick Complete Toggle */}
+          <div
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleComplete();
+            }}
+            className="cursor-pointer p-2 rounded-sm hover:bg-neutral-200 dark:hover:bg-neutral-600"
+            title={isComplete ? "Mark incomplete" : "Mark complete"}
           >
-            {isComplete ? "Complete" : "Incomplete"}
-          </p>
+            {isComplete ? (
+              <div className="w-4 h-4 bg-lime-500 rounded-full flex items-center justify-center">
+                <span className="text-white text-xs">✓</span>
+              </div>
+            ) : (
+              <div className="w-4 h-4 border-2 border-neutral-400 rounded-full"></div>
+            )}
+          </div>
+
+          {/* Menu Trigger */}
+          <div
+            className="p-2 rounded-sm hover:bg-neutral-200 dark:hover:bg-neutral-600 cursor-pointer relative"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowMenu(!showMenu);
+            }}
+          >
+            <MoreHorizontal size={16} />
+
+            {/* Dropdown Menu (positioned relative to trigger) */}
+            {showMenu && (
+              <>
+                {/* Backdrop to close menu */}
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setShowMenu(false)}
+                />
+                <div
+                  className={`absolute right-0 top-0 mt-1 flex flex-col min-w-[200px] max-w-[250px] border rounded-lg p-1 z-50 ${
+                    isLight
+                      ? "bg-white border-neutral-200 shadow-lg"
+                      : "bg-neutral-800 border-neutral-600 shadow-2xl"
+                  }`}
+                >
+                  <div
+                    onClick={() => {
+                      toggleComplete();
+                      setShowMenu(false);
+                    }}
+                    className="text-sm p-2 text-left hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded cursor-pointer"
+                  >
+                    {isComplete ? "Mark incomplete" : "Mark complete"}
+                  </div>
+                  <div className="border-t border-neutral-200 dark:border-neutral-600 my-1"></div>
+                  <div
+                    onClick={() => {
+                      setIsEditing(true);
+                      setIsExpanded(true);
+                      setShowMenu(false);
+                    }}
+                    className="text-sm p-2 text-left hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded cursor-pointer"
+                  >
+                    Edit Exercise Details
+                  </div>
+                  <div
+                    onClick={() => {
+                      setIsExpanded(!isExpanded);
+                      setShowMenu(false);
+                    }}
+                    className="text-sm p-2 text-left hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded cursor-pointer"
+                  >
+                    {isExpanded ? "Hide Details" : "Show Details"}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
-      <button className="p-1 px-2 rounded-sm flex items-center justify-center text-neutral-200 relative">
-        <MoreHorizontal onClick={() => setShowMenu(true)} size={16} />
-        <div
-          className={` 
-          ${showMenu ? "" : "hidden"}
-          absolute bottom-0 right-0 flex flex-col items-startw-fit min-w-[200px] border p-1 rounded-2xl border-neutral-200 ${
-            isLight ? "bg-white" : "bg-[#121212]"
-          }`}
-        >
-          <X
-            onClick={() => setShowMenu(false)}
-            size={14}
-            className="text-neutral-200 hover:text-neutral-400 absolute right-2 top-2"
-          />
-          <p onClick={toggleComplete} className="text-sm w-full p-2 text-left">
-            {isComplete ? "Set incomplete" : "Set complete"}
-          </p>
-          <p className="text-sm w-full p-2 text-left border-t border-neutral-200">
-            Adjust Exerise Details
-          </p>
+
+      {/* Expanded Set Details */}
+      {isExpanded && exerciseLogEntry && (
+        <div className="px-4 pb-4 bg-neutral-100 dark:bg-neutral-800/50">
+          <div className="space-y-4">
+            {/* Exercise Info Header */}
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-neutral-600 dark:text-neutral-400">
+                <strong>Planned:</strong> {exerciseLogEntry.plannedSets} sets ×{" "}
+                {exerciseLogEntry.plannedReps} reps
+                {exerciseLogEntry.plannedRestSecs && (
+                  <span> • {exerciseLogEntry.plannedRestSecs}s rest</span>
+                )}
+              </div>
+              {isEditing && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setIsEditing(false)}
+                    className="px-3 py-1 text-xs bg-neutral-200 dark:bg-neutral-600 hover:bg-neutral-300 dark:hover:bg-neutral-500 rounded text-neutral-700 dark:text-neutral-200"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => setIsEditing(false)}
+                    className="px-3 py-1 text-xs bg-lime-600 hover:bg-lime-500 text-white rounded"
+                  >
+                    Done
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Sets Section */}
+            {exerciseLogEntry.actualSets &&
+            exerciseLogEntry.actualSets.length > 0 ? (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                    Actual Performance:
+                  </h4>
+                  {isEditing && (
+                    <button
+                      onClick={addSet}
+                      className="px-2 py-1 text-xs bg-blue-600 hover:bg-blue-500 text-white rounded"
+                    >
+                      + Add Set
+                    </button>
+                  )}
+                </div>
+
+                {exerciseLogEntry.actualSets.map((set, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-3 p-3 bg-white dark:bg-neutral-700 rounded-lg"
+                  >
+                    <span className="text-xs font-medium min-w-[50px] text-neutral-600 dark:text-neutral-400">
+                      Set {set.setNumber}:
+                    </span>
+
+                    {isEditing ? (
+                      // Editing Mode
+                      <>
+                        {/* Reps Input */}
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            value={set.reps}
+                            onChange={(e) =>
+                              updateSet(
+                                index,
+                                "reps",
+                                parseInt(e.target.value) || 0
+                              )
+                            }
+                            className="w-16 h-8 px-2 text-xs bg-neutral-100 dark:bg-neutral-600 border border-neutral-300 dark:border-neutral-500 rounded text-center"
+                            placeholder="Reps"
+                            min="0"
+                          />
+                          <span className="text-xs text-neutral-500">reps</span>
+                        </div>
+
+                        {/* Weight Input (if applicable) */}
+                        {usesWeight && (
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="number"
+                              value={set.weight || 0}
+                              onChange={(e) =>
+                                updateSet(
+                                  index,
+                                  "weight",
+                                  parseInt(e.target.value) || 0
+                                )
+                              }
+                              className="w-16 h-8 px-2 text-xs bg-neutral-100 dark:bg-neutral-600 border border-neutral-300 dark:border-neutral-500 rounded text-center"
+                              placeholder="Weight"
+                              min="0"
+                            />
+                            <span className="text-xs text-neutral-500">
+                              {fullExercise?.details?.targetMetric?.unit ||
+                                "lbs"}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Set Complete Toggle */}
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={set.completed}
+                            onChange={(e) =>
+                              updateSet(index, "completed", e.target.checked)
+                            }
+                            className="w-4 h-4"
+                          />
+                          <span className="text-xs text-neutral-600 dark:text-neutral-400">
+                            Complete
+                          </span>
+                        </label>
+
+                        {/* Remove Set Button */}
+                        <button
+                          onClick={() => removeSet(index)}
+                          className="ml-auto px-2 py-1 text-xs bg-red-600 hover:bg-red-500 rounded text-white"
+                          title="Remove set"
+                        >
+                          ×
+                        </button>
+                      </>
+                    ) : (
+                      // View Mode
+                      <>
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className="font-medium">{set.reps}</span>
+                          <span className="text-neutral-500">reps</span>
+
+                          {usesWeight &&
+                            set.weight !== undefined &&
+                            set.weight > 0 && (
+                              <>
+                                <span className="text-neutral-400">×</span>
+                                <span className="font-medium">
+                                  {set.weight}
+                                </span>
+                                <span className="text-neutral-500">
+                                  {fullExercise?.details?.targetMetric?.unit ||
+                                    "lbs"}
+                                </span>
+                              </>
+                            )}
+                        </div>
+
+                        {set.restTime && (
+                          <div className="flex items-center gap-1 text-xs text-neutral-500">
+                            <span>Rest:</span>
+                            <span>{Math.round(set.restTime)}s</span>
+                          </div>
+                        )}
+
+                        <div className="ml-auto">
+                          {set.completed ? (
+                            <span className="inline-flex items-center px-2 py-1 text-xs bg-lime-100 text-lime-700 dark:bg-lime-900 dark:text-lime-300 rounded-full">
+                              ✓ Complete
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-1 text-xs bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300 rounded-full">
+                              Partial
+                            </span>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="text-sm text-neutral-500 dark:text-neutral-400 italic p-3 bg-white dark:bg-neutral-700 rounded-lg text-center">
+                  No set data recorded
+                </div>
+                {isEditing && (
+                  <button
+                    onClick={addSet}
+                    className="w-full py-2 text-sm bg-blue-600 hover:bg-blue-500 text-white rounded"
+                  >
+                    + Add First Set
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Notes Section */}
+            {exerciseLogEntry.notes && (
+              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <p className="text-sm text-blue-800 dark:text-blue-300">
+                  <strong>Notes:</strong> {exerciseLogEntry.notes}
+                </p>
+              </div>
+            )}
+          </div>
         </div>
-      </button>
+      )}
     </li>
   );
 };
@@ -375,7 +786,7 @@ const PostWorkoutLog: React.FC<PostWorkoutLogProps> = ({ isDone }) => {
                     <ExerciseLogLi
                       key={index}
                       complete={isComplete}
-                      exerciseObject={exercise}
+                      exerciseLogEntry={exercise}
                     />
                   );
                 }
@@ -543,7 +954,7 @@ const CustomLog: React.FC<PostWorkoutLogProps> = ({ isDone }) => {
     const qq = exerciseQ.trim().toLowerCase();
     console.log("Exercise Library: ", exerciseLibrary);
     if (!qq) return exerciseLibrary;
-    return exerciseLibrary.filter((e) => e.title.toLowerCase().includes(qq));
+    return exerciseLibrary.filter((e) => e.title?.toLowerCase().includes(qq));
   }, [exerciseLibrary, exerciseQ]);
 
   const loadExerciseLibrary = async () => {
@@ -573,10 +984,13 @@ const CustomLog: React.FC<PostWorkoutLogProps> = ({ isDone }) => {
           ...currentWorkoutLog!.workoutDetails.exerciseList,
           {
             exerciseId: exercise.id,
-            name: exercise.title,
-            sets: exercise.details.sets,
-            reps: exercise.details.reps ?? "",
-            restSecs: exercise.details.restSecs ?? 0,
+            name: exercise.title || "",
+            plannedSets: exercise.details?.sets || 3,
+            plannedReps: exercise.details?.reps || "8-12",
+            plannedRestSecs: exercise.details?.restSecs || 60,
+            actualSets: [],
+            completed: false,
+            notes: "",
           },
         ],
       },
@@ -1011,7 +1425,7 @@ const CustomLog: React.FC<PostWorkoutLogProps> = ({ isDone }) => {
                           complete={currentWorkoutLog.workoutDetails.exercisesCompleted.includes(
                             exercise.exerciseId
                           )}
-                          exerciseObject={exercise}
+                          exerciseLogEntry={exercise}
                         />
                       )
                     )

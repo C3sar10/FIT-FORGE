@@ -39,11 +39,29 @@ router.get("/", async (req, res) => {
     createdOn: d.createdOn.toISOString(),
     lastUpdated: d.lastUpdated.toISOString(),
     description: d.description,
-    workoutDetails: d.workoutDetails,
-    workoutDate: d.workoutDate,
+    workoutDetails: {
+      ...d.workoutDetails,
+      workoutTimestamp: d.workoutDetails?.workoutTimestamp?.toISOString(),
+      workoutId: d.workoutDetails?.workoutId
+        ? String(d.workoutDetails.workoutId)
+        : null,
+      exerciseList:
+        d.workoutDetails?.exerciseList?.map((exercise: any) => ({
+          ...exercise,
+          exerciseId: String(exercise.exerciseId),
+          startTime: exercise.startTime
+            ? exercise.startTime.toISOString()
+            : undefined,
+          endTime: exercise.endTime
+            ? exercise.endTime.toISOString()
+            : undefined,
+        })) || [],
+    },
+    workoutDate: d.workoutDate?.toISOString(),
     rating: d.rating,
     intensity: d.intensity,
     notes: d.notes,
+    schemaVersion: d.schemaVersion,
   }));
 
   res.json({ items: payload, nextCursor });
@@ -77,21 +95,55 @@ router.get("/:id", async (req, res) => {
     description: log.description,
     workoutDate: log.workoutDate ? log.workoutDate.toISOString() : null,
     workoutDetails: {
-      ...log.workoutDetails,
-      workoutTitle: log.workoutDetails?.workoutTitle,
-      duration: log.workoutDetails?.duration,
-      exerciseList: log.workoutDetails?.exerciseList,
-      exercisesCompleted: log.workoutDetails?.exercisesCompleted,
-      type: log.workoutDetails?.type,
       workoutTimestamp: log.workoutDetails?.workoutTimestamp.toISOString(),
+      workoutTitle: log.workoutDetails?.workoutTitle,
       workoutId: log.workoutDetails?.workoutId
         ? String(log.workoutDetails.workoutId)
         : null,
+      duration: log.workoutDetails?.duration,
+      exerciseList:
+        log.workoutDetails?.exerciseList?.map((exercise: any) => ({
+          ...exercise,
+          exerciseId: String(exercise.exerciseId),
+          startTime: exercise.startTime
+            ? exercise.startTime.toISOString()
+            : undefined,
+          endTime: exercise.endTime
+            ? exercise.endTime.toISOString()
+            : undefined,
+        })) || [],
+      exercisesCompleted: log.workoutDetails?.exercisesCompleted || [],
+      type: log.workoutDetails?.type,
     },
     rating: log.rating,
     intensity: log.intensity,
     notes: log.notes,
+    schemaVersion: log.schemaVersion,
   });
+});
+
+// Zod schema for set performance
+const SetPerformanceSchema = z.object({
+  setNumber: z.number().int().min(1),
+  reps: z.number().int().min(0),
+  weight: z.number().optional(),
+  restTime: z.number().optional(),
+  completed: z.boolean().default(false),
+  notes: z.string().optional(),
+});
+
+// Zod schema for exercise log entry
+const ExerciseLogEntrySchema = z.object({
+  exerciseId: z.string(),
+  name: z.string(),
+  plannedSets: z.number().int().min(0),
+  plannedReps: z.union([z.number(), z.string()]),
+  plannedRestSecs: z.number().optional(),
+  actualSets: z.array(SetPerformanceSchema).default([]),
+  completed: z.boolean().default(false),
+  notes: z.string().optional(),
+  startTime: z.string().optional(),
+  endTime: z.string().optional(),
 });
 
 // Create log
@@ -103,16 +155,7 @@ const CreateLogSchema = z.object({
     workoutTitle: z.string().min(1),
     workoutId: z.string().nullable(),
     duration: z.union([z.string(), z.number()]),
-    exerciseList: z.array(
-      z.object({
-        /* Match structure */
-        name: z.string(),
-        exerciseId: z.string(),
-        sets: z.number().int().min(1),
-        reps: z.string(),
-        restSecs: z.number().int().min(0),
-      })
-    ),
+    exerciseList: z.array(ExerciseLogEntrySchema),
     exercisesCompleted: z.array(z.string()),
     type: z.string(),
   }),
@@ -126,27 +169,35 @@ router.post("/", async (req, res) => {
   const userId = (req as any).user.userId as string;
   const dto = CreateLogSchema.parse(req.body);
 
+  // Convert exerciseList to proper ObjectIds and structure
+  const exerciseList = dto.workoutDetails.exerciseList.map((exercise) => ({
+    ...exercise,
+    exerciseId: new Types.ObjectId(exercise.exerciseId),
+    startTime: exercise.startTime ? new Date(exercise.startTime) : undefined,
+    endTime: exercise.endTime ? new Date(exercise.endTime) : undefined,
+  }));
+
   const log = new WorkoutLog({
     userId,
     userName: (req as any).user.name || "User", // Adjust based on your user model
     title: dto.title,
     description: dto.description,
     workoutDetails: {
-      ...dto.workoutDetails,
+      workoutTimestamp: new Date(dto.workoutDetails.workoutTimestamp),
+      workoutTitle: dto.workoutDetails.workoutTitle,
       workoutId: dto.workoutDetails?.workoutId
         ? new Types.ObjectId(dto.workoutDetails.workoutId)
         : null,
-      workoutTitle: dto.workoutDetails?.workoutTitle,
-      duration: dto.workoutDetails?.duration,
-      exerciseList: dto.workoutDetails?.exerciseList,
-      exercisesCompleted: dto.workoutDetails?.exercisesCompleted,
-      type: dto.workoutDetails?.type,
-      workoutTimestamp: new Date(dto.workoutDetails.workoutTimestamp), // Convert string to Date
+      duration: dto.workoutDetails.duration,
+      exerciseList: exerciseList,
+      exercisesCompleted: dto.workoutDetails.exercisesCompleted,
+      type: dto.workoutDetails.type,
     },
     workoutDate: dto.workoutDate ? new Date(dto.workoutDate) : undefined,
     rating: dto.rating,
     intensity: dto.intensity,
     notes: dto.notes,
+    schemaVersion: 2, // Set as v2 for new logs
   });
 
   await log.save();
@@ -162,11 +213,26 @@ router.post("/", async (req, res) => {
     description: out.description,
     workoutDetails: {
       ...out.workoutDetails,
-      workoutTimestamp: out.workoutDetails?.workoutTimestamp.toISOString(), // Back to string for client
+      workoutTimestamp: out.workoutDetails?.workoutTimestamp.toISOString(),
+      workoutId: out.workoutDetails?.workoutId
+        ? String(out.workoutDetails.workoutId)
+        : null,
+      exerciseList:
+        out.workoutDetails?.exerciseList?.map((exercise: any) => ({
+          ...exercise,
+          exerciseId: String(exercise.exerciseId),
+          startTime: exercise.startTime
+            ? exercise.startTime.toISOString()
+            : undefined,
+          endTime: exercise.endTime
+            ? exercise.endTime.toISOString()
+            : undefined,
+        })) || [],
     },
     rating: out.rating,
     intensity: out.intensity,
     notes: out.notes,
+    schemaVersion: out.schemaVersion,
   });
 });
 
@@ -197,14 +263,24 @@ router.patch("/:id", async (req, res) => {
       ...existingDetails,
       ...dto.workoutDetails,
       ...(dto.workoutDetails.workoutTimestamp && {
-        workoutTimestamp: new Date(dto.workoutDetails.workoutTimestamp), // Convert string to Date
+        workoutTimestamp: new Date(dto.workoutDetails.workoutTimestamp),
       }),
       ...(dto.workoutDetails.workoutId !== undefined && {
         workoutId: dto.workoutDetails.workoutId
           ? new Types.ObjectId(dto.workoutDetails.workoutId)
           : null,
       }),
-    } as any; // Type assertion to bypass TS inference issue
+      ...(dto.workoutDetails.exerciseList && {
+        exerciseList: dto.workoutDetails.exerciseList.map((exercise) => ({
+          ...exercise,
+          exerciseId: new Types.ObjectId(exercise.exerciseId),
+          startTime: exercise.startTime
+            ? new Date(exercise.startTime)
+            : undefined,
+          endTime: exercise.endTime ? new Date(exercise.endTime) : undefined,
+        })),
+      }),
+    } as any;
     log.workoutDetails = newDetails;
   }
   if (dto.rating !== undefined) log.rating = dto.rating;
@@ -230,10 +306,22 @@ router.patch("/:id", async (req, res) => {
       workoutId: out.workoutDetails?.workoutId
         ? String(out.workoutDetails.workoutId)
         : null,
+      exerciseList:
+        out.workoutDetails?.exerciseList?.map((exercise: any) => ({
+          ...exercise,
+          exerciseId: String(exercise.exerciseId),
+          startTime: exercise.startTime
+            ? exercise.startTime.toISOString()
+            : undefined,
+          endTime: exercise.endTime
+            ? exercise.endTime.toISOString()
+            : undefined,
+        })) || [],
     },
     rating: out.rating,
     intensity: out.intensity,
     notes: out.notes,
+    schemaVersion: out.schemaVersion,
   });
 });
 

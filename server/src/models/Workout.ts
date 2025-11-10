@@ -13,7 +13,7 @@ const WorkoutItemSchema = new Schema(
     reps: { type: Schema.Types.Mixed },
     restSecs: { type: Number },
     repObj: {
-      type: {
+      repType: {
         type: String,
         enum: [
           "number",
@@ -24,6 +24,7 @@ const WorkoutItemSchema = new Schema(
           "timeRange",
           "other",
         ],
+        default: "number",
       },
       repNumber: { type: Number, required: false },
       repRange: {
@@ -48,7 +49,6 @@ const WorkoutItemSchema = new Schema(
         distance: { type: Number, required: false },
         unit: { type: String, required: false },
       },
-
       restTimeSets: {
         time: { type: Number, required: false },
         unit: { type: String, required: false },
@@ -89,12 +89,14 @@ const WorkoutSchema = new Schema(
         items: { type: [WorkoutItemSchema], default: [] },
       },
     ],
+    schemaVersion: { type: Number, default: 1 },
   },
   { timestamps: true }
 );
 
 WorkoutSchema.index({ userId: 1, updatedAt: -1 });
 WorkoutSchema.index({ userId: 1, isFavorite: 1, updatedAt: -1 });
+WorkoutSchema.index({ schemaVersion: 1 });
 
 export type WorkoutDoc = InferSchemaType<typeof WorkoutSchema>;
 export default model<WorkoutDoc>("Workout", WorkoutSchema);

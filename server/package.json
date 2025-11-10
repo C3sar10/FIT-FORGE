@@ -7,7 +7,11 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "seed:exercises": "ts-node --transpile-only src/seeds/seedExercises.ts",
-    "seed:workouts": "ts-node --transpile-only src/seeds/seedWorkouts.ts"
+    "seed:workouts": "ts-node --transpile-only src/seeds/seedWorkouts.ts",
+    "migrate:workouts-v2": "ts-node --transpile-only src/migrations/2025-11-workouts-v2/backfill-workouts-v2.ts",
+    "verify:workouts-v2": "ts-node --transpile-only src/migrations/2025-11-workouts-v2/verify-workouts-v2.ts",
+    "migrate:workoutlogs-v2": "ts-node --transpile-only src/migrations/2025-11-workoutlogs-v2/backfill-workoutlogs-v2.ts",
+    "verify:workoutlogs-v2": "ts-node --transpile-only src/migrations/2025-11-workoutlogs-v2/verify-workoutlogs-v2.ts"
   },
   "keywords": [],
   "author": "",

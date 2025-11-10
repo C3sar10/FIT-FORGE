@@ -276,7 +276,7 @@ const StartWorkoutBody = ({
   const handleStart = () => {
     if (currWorkoutId === null) {
       setPlayerState("play");
-      setCurrWorkoutId(workout.id);
+      setCurrWorkoutId(workout.id === undefined ? null : workout.id);
       if (state.status === "idle" && workout.id) start(workout.id);
       router.back();
       toggleWorkoutPlayer();
@@ -350,18 +350,100 @@ const StartWorkoutBody = ({
       {/* -------- VIEW MODE -------- */}
       {!isEditing && (
         <>
-          <div className="w-full flex flex-col gap-2">
-            <h2 className="text-sm md:text-base font-medium">Exercise List</h2>
-            <ul className="w-full flex flex-col gap-2">
-              {exerciseList.length > 0 &&
-                exerciseList.map((exercise) => (
-                  <ExerciseLi exerciseObj={exercise} key={exercise.id} />
-                ))}
-              {exerciseList.length <= 0 &&
-                Array(5)
-                  .fill(0)
-                  .map((_, index) => <SkeletonExerciseLi key={index} />)}
-            </ul>
+          {/* Workout Summary */}
+          {exerciseList.length > 0 && (
+            <div className="w-full p-4 rounded-2xl bg-black/30 border border-neutral-700 mb-4">
+              <h3 className="text-lg font-semibold mb-3 text-lime-300">
+                Workout Overview
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+                <div className="bg-black/40 rounded-lg p-3">
+                  <div className="text-2xl font-bold text-white">
+                    {exerciseList.length}
+                  </div>
+                  <div className="text-xs text-neutral-300">Exercises</div>
+                </div>
+                <div className="bg-black/40 rounded-lg p-3">
+                  <div className="text-2xl font-bold text-white">
+                    {exerciseList.reduce(
+                      (total, ex) => total + (ex.details?.sets || 0),
+                      0
+                    )}
+                  </div>
+                  <div className="text-xs text-neutral-300">Total Sets</div>
+                </div>
+                <div className="bg-black/40 rounded-lg p-3">
+                  <div className="text-2xl font-bold text-white">
+                    {Math.round(
+                      exerciseList.reduce((total, ex) => {
+                        const restTime =
+                          ex.details?.restTimeSets?.time ||
+                          ex.details?.restSecs ||
+                          60;
+                        const sets = ex.details?.sets || 3;
+                        return total + (restTime * (sets - 1)) / 60; // Convert to minutes, subtract 1 set since no rest after last set
+                      }, 0)
+                    )}
+                  </div>
+                  <div className="text-xs text-neutral-300">
+                    Est. Rest (min)
+                  </div>
+                </div>
+                <div className="bg-black/40 rounded-lg p-3">
+                  <div className="text-2xl font-bold text-lime-300">
+                    {
+                      exerciseList.filter(
+                        (ex) => ex.details?.targetMetric?.number
+                      ).length
+                    }
+                  </div>
+                  <div className="text-xs text-neutral-300">With Targets</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="w-full flex flex-col gap-4">
+            {/* Show blocks structure if multiple blocks exist */}
+            {workout.blocks && workout.blocks.length > 1 ? (
+              workout.blocks.map((block, blockIndex) => (
+                <div key={blockIndex} className="w-full flex flex-col gap-2">
+                  <h2 className="text-sm md:text-base font-medium">
+                    {block.title || `Block ${blockIndex + 1}`}
+                  </h2>
+                  <ul className="w-full flex flex-col gap-2">
+                    {block.items?.map((item) => {
+                      const exercise = exerciseList.find(
+                        (ex) => ex.id === item.exerciseId
+                      );
+                      return exercise ? (
+                        <ExerciseLi
+                          exerciseObj={exercise}
+                          key={`${blockIndex}-${exercise.id}`}
+                        />
+                      ) : null;
+                    })}
+                  </ul>
+                </div>
+              ))
+            ) : (
+              // Single block or no blocks - show as simple exercise list
+              <div className="w-full flex flex-col gap-2">
+                <h2 className="text-sm md:text-base font-medium">
+                  Exercise List
+                </h2>
+                <ul className="w-full flex flex-col gap-2">
+                  {exerciseList.length > 0 &&
+                    exerciseList.map((exercise) => (
+                      <ExerciseLi exerciseObj={exercise} key={exercise.id} />
+                    ))}
+                  {exerciseList.length <= 0 &&
+                    Array(5)
+                      .fill(0)
+                      .map((_, index) => <SkeletonExerciseLi key={index} />)}
+                </ul>
+              </div>
+            )}
           </div>
 
           <div className="w-full mt-4 flex flex-col items-center gap-4">
@@ -633,12 +715,22 @@ const page = () => {
     enabled: !!workoutId,
   });
 
-  // Fetch exercises in parallel, cache each
+  // Fetch exercises in parallel, cache each, and merge with workout-specific data
   useEffect(() => {
     if (workoutData) {
       setCurrWorkout(workoutData);
 
       const fetchExercises = async () => {
+        // Create a map of exerciseId to workout item data
+        const workoutItemsMap = new Map();
+        (workoutData.blocks ?? []).forEach((block: any) => {
+          (block.items ?? []).forEach((item: any) => {
+            if (item.exerciseId) {
+              workoutItemsMap.set(item.exerciseId, item);
+            }
+          });
+        });
+
         const flatIds = (workoutData.blocks ?? []).flatMap((b: any) =>
           (b.items ?? []).map((i: any) => i.exerciseId)
         );
@@ -655,6 +747,52 @@ const page = () => {
                   return await res.json();
                 },
               });
+
+              // Merge workout-specific data with exercise data
+              const workoutItem = workoutItemsMap.get(id);
+              if (workoutItem && data.details) {
+                // Override exercise defaults with workout-specific values
+                return {
+                  ...data,
+                  details: {
+                    ...data.details,
+                    sets: workoutItem.sets ?? data.details.sets,
+                    reps: workoutItem.reps ?? data.details.reps,
+                    restSecs: workoutItem.restSecs ?? data.details.restSecs,
+                    // Merge repObj if available from workout
+                    ...(workoutItem.repObj && {
+                      ...workoutItem.repObj,
+                      // Keep existing exercise repObj as fallback
+                      repType:
+                        workoutItem.repObj.repType ?? data.details.repType,
+                      repNumber:
+                        workoutItem.repObj.repNumber ?? data.details.repNumber,
+                      repRange:
+                        workoutItem.repObj.repRange ?? data.details.repRange,
+                      timeRange:
+                        workoutItem.repObj.timeRange ?? data.details.timeRange,
+                      repDuration:
+                        workoutItem.repObj.repDuration ??
+                        data.details.repDuration,
+                      repDistance:
+                        workoutItem.repObj.repDistance ??
+                        data.details.repDistance,
+                      restTimeSets:
+                        workoutItem.repObj.restTimeSets ??
+                        data.details.restTimeSets,
+                      restTimeReps:
+                        workoutItem.repObj.restTimeReps ??
+                        data.details.restTimeReps,
+                      targetMetric:
+                        workoutItem.repObj.targetMetric ??
+                        data.details.targetMetric,
+                      equipment:
+                        workoutItem.repObj.equipment ?? data.details.equipment,
+                    }),
+                  },
+                };
+              }
+
               return data;
             } catch (err) {
               console.error(`Error fetching exercise ${id}:`, err);
@@ -733,8 +871,10 @@ const page = () => {
           title={currWorkout.name}
           tags={currWorkout.tags}
           imageUrl={currWorkout.image}
-          id={currWorkout.id}
-          description={currWorkout.description}
+          id={currWorkout.id === undefined ? null : currWorkout.id}
+          description={
+            currWorkout.description === undefined ? "" : currWorkout.description
+          }
           author={
             currWorkout.author === "global" ? "FitForge" : user?.name ?? "You"
           }

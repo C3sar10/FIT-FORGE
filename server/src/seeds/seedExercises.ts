@@ -89,6 +89,12 @@ const SEEDS = [
       time: 120,
       unit: "seconds",
     },
+    targetMetric: {
+      type: "weight",
+      name: "Target Weight",
+      number: 185,
+      unit: "lbs",
+    },
     equipment: ["barbell", "bench", "plates"],
     image: "/exercises/bench-press.jpg",
   }),
@@ -237,6 +243,12 @@ const SEEDS = [
       time: 180,
       unit: "seconds",
     },
+    targetMetric: {
+      type: "weight",
+      name: "Target Weight",
+      number: 225,
+      unit: "lbs",
+    },
     equipment: ["barbell", "rack", "plates"],
     image: "/exercises/barbell-squat.jpg",
   }),
@@ -350,6 +362,12 @@ const SEEDS = [
     },
     restTimeSets: {
       time: 60,
+      unit: "seconds",
+    },
+    targetMetric: {
+      type: "time",
+      name: "Target Duration",
+      number: 60,
       unit: "seconds",
     },
     equipment: [],

@@ -21,14 +21,17 @@ interface ExerciseLiProps {
   exerciseObj: ExerciseType;
   setCurrentWorkoutLog?: (arg0: WorkoutLogType | null) => void;
   currentWorkoutLog?: WorkoutLogType | null;
+  exerciseLogEntry?: import("@/types/progress").ExerciseLogEntry;
 }
 
 const LiveExerciseLi: React.FC<ExerciseLiProps> = ({
   exerciseObj,
   setCurrentWorkoutLog,
   currentWorkoutLog,
+  exerciseLogEntry,
 }) => {
   const router = useRouter();
+  const [isExpanded, setIsExpanded] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
 
   if (!exerciseObj)
@@ -38,70 +41,310 @@ const LiveExerciseLi: React.FC<ExerciseLiProps> = ({
       </li>
     );
 
+  // Check if this exercise is completed
+  useEffect(() => {
+    if (currentWorkoutLog && exerciseLogEntry) {
+      setIsChecked(exerciseLogEntry.completed || false);
+    }
+  }, [currentWorkoutLog, exerciseLogEntry]);
+
   const handleCheck = (event: React.ChangeEvent<HTMLInputElement>) => {
     const newCheckedState = event.target.checked;
     setIsChecked(newCheckedState);
-    if (!setCurrentWorkoutLog || !currentWorkoutLog) return;
-    if (setCurrentWorkoutLog && newCheckedState && currentWorkoutLog != null) {
-      setCurrentWorkoutLog({
-        ...currentWorkoutLog,
-        workoutDetails: {
-          ...currentWorkoutLog.workoutDetails,
-          exercisesCompleted: [
-            ...currentWorkoutLog.workoutDetails.exercisesCompleted,
-            exerciseObj.id,
-          ],
-        },
+
+    if (!setCurrentWorkoutLog || !currentWorkoutLog || !exerciseLogEntry)
+      return;
+
+    // Update the exercise completion status in the log entry
+    const updatedExerciseList =
+      currentWorkoutLog.workoutDetails.exerciseList.map((entry) => {
+        if (entry.exerciseId === exerciseObj.id) {
+          return { ...entry, completed: newCheckedState };
+        }
+        return entry;
       });
-    } else {
-      setCurrentWorkoutLog({
-        ...currentWorkoutLog,
-        workoutDetails: {
-          ...currentWorkoutLog.workoutDetails,
-          exercisesCompleted:
-            currentWorkoutLog.workoutDetails.exercisesCompleted.filter(
-              (id) => id !== exerciseObj.id
-            ),
-        },
-      });
-    }
+
+    // Also update the exercisesCompleted array for backward compatibility
+    const exercisesCompleted = newCheckedState
+      ? [
+          ...currentWorkoutLog.workoutDetails.exercisesCompleted,
+          exerciseObj.id || "",
+        ]
+      : currentWorkoutLog.workoutDetails.exercisesCompleted.filter(
+          (id) => id !== exerciseObj.id
+        );
+
+    setCurrentWorkoutLog({
+      ...currentWorkoutLog,
+      workoutDetails: {
+        ...currentWorkoutLog.workoutDetails,
+        exerciseList: updatedExerciseList,
+        exercisesCompleted: exercisesCompleted.filter((id) => id), // Remove empty strings
+      },
+    });
   };
 
+  const addSet = () => {
+    if (!setCurrentWorkoutLog || !currentWorkoutLog || !exerciseLogEntry)
+      return;
+
+    const newSetNumber = (exerciseLogEntry.actualSets?.length || 0) + 1;
+    const newSet = {
+      setNumber: newSetNumber,
+      reps: 0,
+      weight: 0,
+      completed: false,
+      restTime: exerciseLogEntry.plannedRestSecs || 60,
+    };
+
+    const updatedExerciseList =
+      currentWorkoutLog.workoutDetails.exerciseList.map((entry) => {
+        if (entry.exerciseId === exerciseObj.id) {
+          return {
+            ...entry,
+            actualSets: [...(entry.actualSets || []), newSet],
+          };
+        }
+        return entry;
+      });
+
+    setCurrentWorkoutLog({
+      ...currentWorkoutLog,
+      workoutDetails: {
+        ...currentWorkoutLog.workoutDetails,
+        exerciseList: updatedExerciseList,
+      },
+    });
+  };
+
+  const updateSet = (
+    setIndex: number,
+    field: "reps" | "weight" | "completed",
+    value: number | boolean
+  ) => {
+    if (!setCurrentWorkoutLog || !currentWorkoutLog || !exerciseLogEntry)
+      return;
+
+    const updatedExerciseList =
+      currentWorkoutLog.workoutDetails.exerciseList.map((entry) => {
+        if (entry.exerciseId === exerciseObj.id) {
+          const updatedSets = [...(entry.actualSets || [])];
+          if (updatedSets[setIndex]) {
+            updatedSets[setIndex] = {
+              ...updatedSets[setIndex],
+              [field]: value,
+            };
+          }
+          return { ...entry, actualSets: updatedSets };
+        }
+        return entry;
+      });
+
+    setCurrentWorkoutLog({
+      ...currentWorkoutLog,
+      workoutDetails: {
+        ...currentWorkoutLog.workoutDetails,
+        exerciseList: updatedExerciseList,
+      },
+    });
+  };
+
+  const removeSet = (setIndex: number) => {
+    if (!setCurrentWorkoutLog || !currentWorkoutLog || !exerciseLogEntry)
+      return;
+
+    const updatedExerciseList =
+      currentWorkoutLog.workoutDetails.exerciseList.map((entry) => {
+        if (entry.exerciseId === exerciseObj.id) {
+          const updatedSets =
+            entry.actualSets?.filter((_, index) => index !== setIndex) || [];
+          // Renumber sets
+          const renumberedSets = updatedSets.map((set, index) => ({
+            ...set,
+            setNumber: index + 1,
+          }));
+          return { ...entry, actualSets: renumberedSets };
+        }
+        return entry;
+      });
+
+    setCurrentWorkoutLog({
+      ...currentWorkoutLog,
+      workoutDetails: {
+        ...currentWorkoutLog.workoutDetails,
+        exerciseList: updatedExerciseList,
+      },
+    });
+  };
+
+  // Helper to determine if exercise uses weight
+  const usesWeight =
+    exerciseObj.details?.targetMetric?.type === "weight" ||
+    exerciseObj.tags?.some((tag) =>
+      ["strength", "barbell", "dumbbell", "plates"].includes(tag.toLowerCase())
+    );
+
   return (
-    <li className="w-full p-2 rounded-md border border-neutral-200 bg-black/50 hover:bg-black/90 cursor-pointer flex items-center justify-between">
-      <div className="flex items-center">
-        <input
-          checked={isChecked}
-          onChange={handleCheck}
-          type="checkbox"
-          className="size-6 mr-4 bg-transparent border-white"
-        />
-        <div
-          onClick={() => router.push(`/exercisepreview/${exerciseObj.id}`)}
-          className="flex flex-col items-start"
-        >
-          <h2
-            className={`${
-              isChecked ? "line-through text-neutral-400" : ""
-            } text-base font-medium`}
-          >
-            {exerciseObj.title}
-          </h2>
-          <div
-            className={`${
-              isChecked ? "line-through text-neutral-500" : ""
-            } flex items-center gap-1 text-sm`}
-          >
-            <p>Sets {exerciseObj.details.sets.toLocaleString()}</p>
-            <p>|</p>
-            <p>Reps {exerciseObj.details.reps}</p>
+    <li className="w-full rounded-md border border-neutral-200 bg-black/50 overflow-hidden">
+      {/* Exercise Header */}
+      <div
+        className="w-full p-3 flex items-center justify-between hover:bg-black/70 cursor-pointer"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div className="flex items-center gap-3">
+          <input
+            checked={isChecked}
+            onChange={handleCheck}
+            onClick={(e) => e.stopPropagation()}
+            type="checkbox"
+            className="size-5 bg-transparent border-white"
+          />
+          <div className="flex flex-col items-start">
+            <h2
+              className={`${
+                isChecked ? "line-through text-neutral-400" : ""
+              } text-base font-medium`}
+            >
+              {exerciseObj.title}
+            </h2>
+            <div
+              className={`${
+                isChecked ? "line-through text-neutral-500" : ""
+              } flex items-center gap-1 text-xs text-neutral-300`}
+            >
+              <span>
+                Planned:{" "}
+                {exerciseLogEntry?.plannedSets ||
+                  exerciseObj.details?.sets ||
+                  3}{" "}
+                sets
+              </span>
+              <span>•</span>
+              <span>Done: {exerciseLogEntry?.actualSets?.length || 0}</span>
+              {exerciseLogEntry?.actualSets &&
+                exerciseLogEntry.actualSets.length > 0 && (
+                  <>
+                    <span>•</span>
+                    <span>
+                      Completed:{" "}
+                      {
+                        exerciseLogEntry.actualSets.filter(
+                          (s: any) => s.completed
+                        ).length
+                      }
+                    </span>
+                  </>
+                )}
+            </div>
           </div>
         </div>
+        <div className="flex items-center gap-2">
+          <ChevronRightIcon
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(`/exercisepreview/${exerciseObj.id}`);
+            }}
+            className="size-4 text-neutral-400"
+          />
+          <ChevronDown
+            className={`size-4 text-neutral-400 transition-transform ${
+              isExpanded ? "rotate-180" : ""
+            }`}
+          />
+        </div>
       </div>
-      <ChevronRightIcon
-        onClick={() => router.push(`/exercisepreview/${exerciseObj.id}`)}
-        className="justify-self-end justify-items-end size-4"
-      />
+
+      {/* Expanded Set Tracking */}
+      {isExpanded && (
+        <div className="px-3 pb-3 bg-black/30">
+          <div className="space-y-2">
+            {exerciseLogEntry?.actualSets?.map((set: any, index: number) => (
+              <div
+                key={index}
+                className="flex items-center gap-2 p-2 bg-neutral-800/50 rounded-lg"
+              >
+                <span className="text-xs font-medium min-w-[40px]">
+                  Set {set.setNumber}:
+                </span>
+
+                {/* Reps Input */}
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    value={set.reps}
+                    onChange={(e) =>
+                      updateSet(index, "reps", parseInt(e.target.value) || 0)
+                    }
+                    className="w-16 h-8 px-2 text-xs bg-neutral-700 border border-neutral-600 rounded text-center text-white"
+                    placeholder="Reps"
+                    min="0"
+                  />
+                  <span className="text-xs text-neutral-400">reps</span>
+                </div>
+
+                {/* Weight Input (if applicable) */}
+                {usesWeight && (
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      value={set.weight || 0}
+                      onChange={(e) =>
+                        updateSet(
+                          index,
+                          "weight",
+                          parseInt(e.target.value) || 0
+                        )
+                      }
+                      className="w-16 h-8 px-2 text-xs bg-neutral-700 border border-neutral-600 rounded text-center text-white"
+                      placeholder="Weight"
+                      min="0"
+                    />
+                    <span className="text-xs text-neutral-400">
+                      {exerciseObj.details?.targetMetric?.unit || "lbs"}
+                    </span>
+                  </div>
+                )}
+
+                {/* Set Complete Toggle */}
+                <input
+                  type="checkbox"
+                  checked={set.completed}
+                  onChange={(e) =>
+                    updateSet(index, "completed", e.target.checked)
+                  }
+                  className="size-4"
+                  title="Mark set as complete"
+                />
+
+                {/* Remove Set Button */}
+                <button
+                  onClick={() => removeSet(index)}
+                  className="ml-auto px-2 py-1 text-xs bg-red-600 hover:bg-red-500 rounded text-white"
+                  title="Remove set"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {/* Add Set Button */}
+          <button
+            onClick={addSet}
+            className="w-full mt-2 py-2 text-sm bg-lime-600 hover:bg-lime-500 rounded text-white font-medium"
+          >
+            + Add Set
+          </button>
+
+          {/* Target Metric Display */}
+          {exerciseObj.details?.targetMetric?.number && (
+            <div className="mt-2 p-2 bg-lime-900/20 border border-lime-600/30 rounded text-xs text-lime-300">
+              🎯 Target: {exerciseObj.details.targetMetric.number}{" "}
+              {exerciseObj.details.targetMetric.unit}
+            </div>
+          )}
+        </div>
+      )}
     </li>
   );
 };
@@ -165,10 +408,10 @@ const WorkoutPlayer = (props: Props) => {
           author: exerciseMap.get(id)?.author ?? "",
           description: exerciseMap.get(id)?.description ?? "",
           details: exerciseMap.get(id)?.details ?? {
-            sets: exerciseMap.get(id)?.details.sets ?? 0,
-            reps: exerciseMap.get(id)?.details.reps ?? "N/A",
-            restSecs: exerciseMap.get(id)?.details.restSecs ?? 0,
-            equipment: exerciseMap.get(id)?.details.equipment ?? [],
+            sets: exerciseMap.get(id)?.details?.sets ?? 0,
+            reps: exerciseMap.get(id)?.details?.reps ?? "N/A",
+            restSecs: exerciseMap.get(id)?.details?.restSecs ?? 0,
+            equipment: exerciseMap.get(id)?.details?.equipment ?? [],
           },
         }));
         setExerciseList(fullList);
@@ -214,10 +457,10 @@ const WorkoutPlayer = (props: Props) => {
               author: exerciseMap.get(id)?.author ?? "",
               description: exerciseMap.get(id)?.description ?? "",
               details: exerciseMap.get(id)?.details ?? {
-                sets: exerciseMap.get(id)?.details.sets ?? 0,
-                reps: exerciseMap.get(id)?.details.reps ?? "N/A",
-                restSecs: exerciseMap.get(id)?.details.restSecs ?? 0,
-                equipment: exerciseMap.get(id)?.details.equipment ?? [],
+                sets: exerciseMap.get(id)?.details?.sets ?? 0,
+                reps: exerciseMap.get(id)?.details?.reps ?? "N/A",
+                restSecs: exerciseMap.get(id)?.details?.restSecs ?? 0,
+                equipment: exerciseMap.get(id)?.details?.equipment ?? [],
               },
             }));
             setExerciseList(fullList);
@@ -278,10 +521,13 @@ const WorkoutPlayer = (props: Props) => {
               duration: 0,
               exerciseList: exerciseList.map((exercise) => ({
                 exerciseId: exercise.id,
-                name: exercise.title,
-                sets: exercise.details.sets,
-                reps: exercise.details.reps ?? "",
-                restSecs: exercise.details.restSecs ?? 0,
+                name: exercise.title || "",
+                plannedSets: exercise.details?.sets || 3,
+                plannedReps: exercise.details?.reps || "8-12",
+                plannedRestSecs: exercise.details?.restSecs || 60,
+                actualSets: [],
+                completed: false,
+                notes: "",
               })),
               exercisesCompleted: [],
               type:
@@ -366,14 +612,23 @@ const WorkoutPlayer = (props: Props) => {
           <div className="w-full flex flex-col gap-2">
             <h2 className="text-sm md:text-base font-medium">Exercise List</h2>
             <ul className="w-full flex flex-col gap-2">
-              {exerciseList.map((exercise) => (
-                <LiveExerciseLi
-                  exerciseObj={exercise}
-                  key={exercise.id}
-                  currentWorkoutLog={currentWorkoutLog}
-                  setCurrentWorkoutLog={setCurrentWorkoutLog}
-                />
-              ))}
+              {exerciseList.map((exercise) => {
+                // Find the corresponding exercise log entry
+                const exerciseLogEntry =
+                  currentWorkoutLog?.workoutDetails?.exerciseList?.find(
+                    (entry) => entry.exerciseId === exercise.id
+                  );
+
+                return (
+                  <LiveExerciseLi
+                    exerciseObj={exercise}
+                    key={exercise.id}
+                    currentWorkoutLog={currentWorkoutLog}
+                    setCurrentWorkoutLog={setCurrentWorkoutLog}
+                    exerciseLogEntry={exerciseLogEntry}
+                  />
+                );
+              })}
             </ul>
           </div>
           <div className="w-full mt-4  h-[64px] flex items-center gap-1">

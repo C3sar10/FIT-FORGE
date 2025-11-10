@@ -14,9 +14,206 @@ import {
   Check,
   Pencil,
   Trash2,
+  Plus,
+  Minus,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
+
+/* ---------------- Target Metric Input Component ---------------- */
+interface TargetMetricInputProps {
+  targetMetric: {
+    type: string;
+    name: string;
+    number: number | undefined;
+    unit: string;
+  };
+  onChange: (targetMetric: {
+    type: string;
+    name: string;
+    number: number | undefined;
+    unit: string;
+  }) => void;
+}
+
+const TargetMetricInput: React.FC<TargetMetricInputProps> = ({
+  targetMetric,
+  onChange,
+}) => {
+  const getUnitsForType = (type: string): string[] => {
+    switch (type) {
+      case "weight":
+        return ["lbs", "kg"];
+      case "time":
+        return ["seconds", "minutes", "hours"];
+      case "distance":
+        return ["meters", "kilometers", "feet", "miles", "yards"];
+      case "count":
+        return ["reps", "sets", "cycles"];
+      case "speed":
+        return ["mph", "km/h", "m/s"];
+      case "percentage":
+        return ["%"];
+      default:
+        return ["units"];
+    }
+  };
+
+  const getDefaultUnit = (type: string): string => {
+    const units = getUnitsForType(type);
+    return units[0];
+  };
+
+  const handleTypeChange = (newType: string) => {
+    const defaultUnit = getDefaultUnit(newType);
+    onChange({
+      ...targetMetric,
+      type: newType,
+      unit: defaultUnit,
+    });
+  };
+
+  return (
+    <div className="flex flex-col gap-3">
+      <h3 className="text-sm font-medium">Target Metric</h3>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        {/* Metric Type */}
+        <li className="flex flex-col gap-1">
+          <label className="text-sm">Metric Type</label>
+          <select
+            className="h-12 rounded-2xl border border-neutral-300 px-4 bg-black text-white"
+            value={targetMetric.type}
+            onChange={(e) => handleTypeChange(e.target.value)}
+          >
+            <option value="">Select Type</option>
+            <option value="weight">Weight</option>
+            <option value="time">Time</option>
+            <option value="distance">Distance</option>
+            <option value="count">Count</option>
+            <option value="speed">Speed</option>
+            <option value="percentage">Percentage</option>
+            <option value="other">Other</option>
+          </select>
+        </li>
+
+        {/* Metric Name */}
+        <li className="flex flex-col gap-1">
+          <label className="text-sm">Metric Name</label>
+          <input
+            className="h-12 rounded-2xl border border-neutral-300 px-4 bg-black text-white"
+            value={targetMetric.name}
+            onChange={(e) =>
+              onChange({ ...targetMetric, name: e.target.value })
+            }
+            placeholder="e.g. Target Weight, Max Speed"
+          />
+        </li>
+
+        {/* Target Value */}
+        <NumberInput
+          label="Target Value"
+          value={targetMetric.number}
+          onChange={(value) => onChange({ ...targetMetric, number: value })}
+          min={0}
+          placeholder="Target amount"
+        />
+
+        {/* Units */}
+        <li className="flex flex-col gap-1">
+          <label className="text-sm">Unit</label>
+          <select
+            className="h-12 rounded-2xl border border-neutral-300 px-4 bg-black text-white"
+            value={targetMetric.unit}
+            onChange={(e) =>
+              onChange({ ...targetMetric, unit: e.target.value })
+            }
+            disabled={!targetMetric.type}
+          >
+            {getUnitsForType(targetMetric.type).map((unit) => (
+              <option key={unit} value={unit}>
+                {unit}
+              </option>
+            ))}
+          </select>
+        </li>
+      </div>
+    </div>
+  );
+};
+
+/* ---------------- Number Input with Increment/Decrement ---------------- */
+interface NumberInputProps {
+  label: string;
+  value: number | undefined;
+  onChange: (value: number | undefined) => void;
+  min?: number;
+  max?: number;
+  placeholder?: string;
+}
+
+const NumberInput: React.FC<NumberInputProps> = ({
+  label,
+  value,
+  onChange,
+  min = 0,
+  max,
+  placeholder,
+}) => {
+  const handleIncrement = () => {
+    const newValue = (value ?? 0) + 1;
+    if (!max || newValue <= max) {
+      onChange(newValue);
+    }
+  };
+
+  const handleDecrement = () => {
+    const newValue = Math.max(min, (value ?? 1) - 1);
+    onChange(newValue === 0 ? undefined : newValue);
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value ? Number(e.target.value) : undefined;
+    if (
+      newValue === undefined ||
+      (newValue >= min && (!max || newValue <= max))
+    ) {
+      onChange(newValue);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-1">
+      <label className="text-sm">{label}</label>
+      <div className="flex items-center">
+        <button
+          type="button"
+          onClick={handleDecrement}
+          disabled={(value ?? 0) <= min}
+          className="h-12 w-12 rounded-l-2xl border border-r-0 border-neutral-300 bg-neutral-800 text-white hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+        >
+          <Minus size={16} />
+        </button>
+        <input
+          type="number"
+          className="h-12 border border-neutral-300 px-4 bg-black text-white text-center flex-1 min-w-0"
+          value={value ?? ""}
+          onChange={handleChange}
+          placeholder={placeholder}
+          min={min}
+          max={max}
+        />
+        <button
+          type="button"
+          onClick={handleIncrement}
+          disabled={max !== undefined && (value ?? 0) >= max}
+          className="h-12 w-12 rounded-r-2xl border border-l-0 border-neutral-300 bg-neutral-800 text-white hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+        >
+          <Plus size={16} />
+        </button>
+      </div>
+    </div>
+  );
+};
 
 /* ---------------- Header (unchanged visual) ---------------- */
 interface HeaderProps {
@@ -126,35 +323,64 @@ const StartExerciseBody: React.FC<BodyProps> = ({
   const [sets, setSets] = useState<number | undefined>(
     exercise.details?.sets ?? undefined
   );
-  const [reps, setReps] = useState<string>(
-    (exercise.details?.reps ?? "") as string
-  );
-  const [restSecs, setRestSecs] = useState<number | undefined>(
-    exercise.details?.restSecs ?? undefined
-  );
   const [equipmentInput, setEquipmentInput] = useState(
     toStringList(exercise.details?.equipment as any)
   );
-  //new features of exercises
+
+  // New exercise details state
   const [repType, setRepType] = useState<string>(
-    (exercise.details?.repType ?? "") as string
+    exercise.details?.repType ?? "number"
   );
   const [repNumber, setRepNumber] = useState<number | undefined>(
     exercise.details?.repNumber ?? undefined
   );
   const [repRange, setRepRange] = useState<{
-    min: number | null;
-    max: number | null;
+    min: number | undefined;
+    max: number | undefined;
   }>({
-    min: exercise.details.repRange?.min ?? null,
-    max: exercise.details.repRange?.max ?? null,
+    min: exercise.details?.repRange?.min ?? undefined,
+    max: exercise.details?.repRange?.max ?? undefined,
   });
-  const [timeRange, setTimeRange] = useState<{
-    min: any | null;
-    max: any | null;
+  const [repDuration, setRepDuration] = useState<{
+    time: number | undefined;
+    unit: string;
   }>({
-    min: exercise.details.timeRange?.min ?? null,
-    max: exercise.details.timeRange?.max ?? null,
+    time: exercise.details?.repDuration?.time ?? undefined,
+    unit: exercise.details?.repDuration?.unit ?? "seconds",
+  });
+  const [repDistance, setRepDistance] = useState<{
+    distance: number | undefined;
+    unit: string;
+  }>({
+    distance: exercise.details?.repDistance?.distance ?? undefined,
+    unit: exercise.details?.repDistance?.unit ?? "meters",
+  });
+  const [restTimeSets, setRestTimeSets] = useState<{
+    time: number | undefined;
+    unit: string;
+  }>({
+    time: exercise.details?.restTimeSets?.time ?? undefined,
+    unit: exercise.details?.restTimeSets?.unit ?? "seconds",
+  });
+  const [restTimeReps, setRestTimeReps] = useState<{
+    time: number | undefined;
+    unit: string;
+  }>({
+    time: exercise.details?.restTimeReps?.time ?? undefined,
+    unit: exercise.details?.restTimeReps?.unit ?? "seconds",
+  });
+
+  // Target Metric State
+  const [targetMetric, setTargetMetric] = useState<{
+    type: string;
+    name: string;
+    number: number | undefined;
+    unit: string;
+  }>({
+    type: exercise.details?.targetMetric?.type ?? "",
+    name: exercise.details?.targetMetric?.name ?? "",
+    number: exercise.details?.targetMetric?.number ?? undefined,
+    unit: exercise.details?.targetMetric?.unit ?? "units",
   });
 
   // If exercise changes (nav), sync local edit state
@@ -164,9 +390,38 @@ const StartExerciseBody: React.FC<BodyProps> = ({
     setDescription(exercise.description ?? "");
     setTagsInput(toStringList(exercise.tags));
     setSets(exercise.details?.sets ?? undefined);
-    setReps((exercise.details?.reps ?? "") as string);
-    setRestSecs(exercise.details?.restSecs ?? undefined);
     setEquipmentInput(toStringList(exercise.details?.equipment as any));
+
+    // Update new fields
+    setRepType(exercise.details?.repType ?? "number");
+    setRepNumber(exercise.details?.repNumber ?? undefined);
+    setRepRange({
+      min: exercise.details?.repRange?.min ?? undefined,
+      max: exercise.details?.repRange?.max ?? undefined,
+    });
+    setRepDuration({
+      time: exercise.details?.repDuration?.time ?? undefined,
+      unit: exercise.details?.repDuration?.unit ?? "seconds",
+    });
+    setRepDistance({
+      distance: exercise.details?.repDistance?.distance ?? undefined,
+      unit: exercise.details?.repDistance?.unit ?? "meters",
+    });
+    setRestTimeSets({
+      time: exercise.details?.restTimeSets?.time ?? undefined,
+      unit: exercise.details?.restTimeSets?.unit ?? "seconds",
+    });
+    setRestTimeReps({
+      time: exercise.details?.restTimeReps?.time ?? undefined,
+      unit: exercise.details?.restTimeReps?.unit ?? "seconds",
+    });
+    setTargetMetric({
+      type: exercise.details?.targetMetric?.type ?? "",
+      name: exercise.details?.targetMetric?.name ?? "",
+      number: exercise.details?.targetMetric?.number ?? undefined,
+      unit: exercise.details?.targetMetric?.unit ?? "units",
+    });
+
     setIsEditing(false);
     setDropDown(false);
   }, [exercise.id]);
@@ -185,9 +440,38 @@ const StartExerciseBody: React.FC<BodyProps> = ({
     setDescription(exercise.description ?? "");
     setTagsInput(toStringList(exercise.tags));
     setSets(exercise.details?.sets ?? undefined);
-    setReps((exercise.details?.reps ?? "") as string);
-    setRestSecs(exercise.details?.restSecs ?? undefined);
     setEquipmentInput(toStringList(exercise.details?.equipment as any));
+
+    // Revert new fields
+    setRepType(exercise.details?.repType ?? "number");
+    setRepNumber(exercise.details?.repNumber ?? undefined);
+    setRepRange({
+      min: exercise.details?.repRange?.min ?? undefined,
+      max: exercise.details?.repRange?.max ?? undefined,
+    });
+    setRepDuration({
+      time: exercise.details?.repDuration?.time ?? undefined,
+      unit: exercise.details?.repDuration?.unit ?? "seconds",
+    });
+    setRepDistance({
+      distance: exercise.details?.repDistance?.distance ?? undefined,
+      unit: exercise.details?.repDistance?.unit ?? "meters",
+    });
+    setRestTimeSets({
+      time: exercise.details?.restTimeSets?.time ?? undefined,
+      unit: exercise.details?.restTimeSets?.unit ?? "seconds",
+    });
+    setRestTimeReps({
+      time: exercise.details?.restTimeReps?.time ?? undefined,
+      unit: exercise.details?.restTimeReps?.unit ?? "seconds",
+    });
+    setTargetMetric({
+      type: exercise.details?.targetMetric?.type ?? "",
+      name: exercise.details?.targetMetric?.name ?? "",
+      number: exercise.details?.targetMetric?.number ?? undefined,
+      unit: exercise.details?.targetMetric?.unit ?? "units",
+    });
+
     setIsEditing(false);
   };
 
@@ -203,28 +487,100 @@ const StartExerciseBody: React.FC<BodyProps> = ({
     return res === "save";
   };
 
+  const validateRepRange = (): boolean => {
+    if (repType === "repRange") {
+      const { min, max } = repRange;
+      if (min === undefined || max === undefined) return false;
+      if (min < 0 || max < 0) return false;
+      if (min >= max) return false;
+    }
+    return true;
+  };
+
   const handleSave = async () => {
+    // Validate rep ranges
+    if (!validateRepRange()) {
+      showDialog({
+        title: "Invalid Rep Range",
+        message:
+          "Please ensure rep range has valid min and max values where min < max, and both are >= 0.",
+        actions: [{ id: "ok", label: "OK", variant: "primary" }],
+      });
+      return;
+    }
+
     const ok = await confirmSave();
     if (!ok) return;
 
-    // Build patch payload (only fields your schema knows)
+    // Build details object based on repType
+    const details: any = {
+      sets: Number.isFinite(sets as any) ? Number(sets) : undefined,
+      repType,
+      equipment: fromStringList(equipmentInput),
+    };
+
+    // Add rep-specific fields based on repType
+    switch (repType) {
+      case "number":
+        if (repNumber !== undefined) details.repNumber = repNumber;
+        break;
+      case "repRange":
+        if (repRange.min !== undefined && repRange.max !== undefined) {
+          details.repRange = { min: repRange.min, max: repRange.max };
+        }
+        break;
+      case "duration":
+        if (repDuration.time !== undefined) {
+          details.repDuration = {
+            time: repDuration.time,
+            unit: repDuration.unit,
+          };
+        }
+        break;
+      case "distance":
+        if (repDistance.distance !== undefined) {
+          details.repDistance = {
+            distance: repDistance.distance,
+            unit: repDistance.unit,
+          };
+        }
+        break;
+    }
+
+    // Add rest time fields if provided
+    if (restTimeSets.time !== undefined) {
+      details.restTimeSets = {
+        time: restTimeSets.time,
+        unit: restTimeSets.unit,
+      };
+    }
+    if (restTimeReps.time !== undefined) {
+      details.restTimeReps = {
+        time: restTimeReps.time,
+        unit: restTimeReps.unit,
+      };
+    }
+
+    // Add target metric if provided
+    if (
+      targetMetric.type &&
+      targetMetric.name &&
+      targetMetric.number !== undefined
+    ) {
+      details.targetMetric = {
+        type: targetMetric.type,
+        name: targetMetric.name,
+        number: targetMetric.number,
+        unit: targetMetric.unit,
+      };
+    }
+
     const payload: any = {
-      title: title.trim(),
+      title: title === undefined ? "" : title.trim(),
       type: type as any,
       description: description.trim(),
       tags: fromStringList(tagsInput).slice(0, 12),
-      details: {
-        sets: Number.isFinite(sets as any) ? Number(sets) : undefined,
-        // allow number or "6-10"
-        reps:
-          typeof reps === "string" && /^\d+$/.test(reps.trim())
-            ? Number(reps.trim())
-            : reps?.toString()?.trim() || undefined,
-        restSecs: Number.isFinite(restSecs as any)
-          ? Number(restSecs)
-          : undefined,
-        equipment: fromStringList(equipmentInput),
-      },
+      details,
     };
 
     // Clean undefineds
@@ -280,23 +636,25 @@ const StartExerciseBody: React.FC<BodyProps> = ({
                 </p>
               </li>
               <li className="w-full flex flex-col gap-1 p-4 bg-lime-950 border border-neutral-200 rounded-2xl text-white">
-                {repType === "number" && (
+                {exercise.details?.repType === "number" && (
                   <>
                     <p className="font-medium">Reps</p>{" "}
-                    <p className="font-semibold text-4xl">{repNumber}</p>
-                  </>
-                )}
-                {repType === "repRange" && (
-                  <>
-                    <p className="font-medium">Rep Range</p>{" "}
                     <p className="font-semibold text-4xl">
-                      {repRange.min}
-                      {" - "}
-                      {repRange.max}
+                      {exercise.details?.repNumber ?? "-"}
                     </p>
                   </>
                 )}
-                {repType === "distance" && (
+                {exercise.details?.repType === "repRange" && (
+                  <>
+                    <p className="font-medium">Rep Range</p>{" "}
+                    <p className="font-semibold text-4xl">
+                      {exercise.details?.repRange?.min ?? "-"}
+                      {" - "}
+                      {exercise.details?.repRange?.max ?? "-"}
+                    </p>
+                  </>
+                )}
+                {exercise.details?.repType === "distance" && (
                   <>
                     <p className="font-medium">Distance</p>
                     <p className="font-semibold text-4xl">
@@ -305,17 +663,18 @@ const StartExerciseBody: React.FC<BodyProps> = ({
                     </p>
                   </>
                 )}
-                {repType === "timeRange" && (
+                {exercise.details?.repType === "timeRange" && (
                   <>
                     <p className="font-medium">Time Range</p>{" "}
                     <p className="font-semibold text-4xl">
-                      {timeRange.min}
-                      {" - "}
-                      {timeRange.max}
+                      {exercise.details?.timeRange?.min?.time ?? "-"}{" "}
+                      {exercise.details?.timeRange?.min?.unit ?? ""} -{" "}
+                      {exercise.details?.timeRange?.max?.time ?? "-"}{" "}
+                      {exercise.details?.timeRange?.max?.unit ?? ""}
                     </p>
                   </>
                 )}
-                {repType === "duration" && (
+                {exercise.details?.repType === "duration" && (
                   <>
                     <p className="font-medium">Duration</p>{" "}
                     <p className="font-semibold text-4xl">
@@ -324,16 +683,32 @@ const StartExerciseBody: React.FC<BodyProps> = ({
                     </p>
                   </>
                 )}
+                {!exercise.details?.repType && (
+                  <>
+                    <p className="font-medium">Reps</p>{" "}
+                    <p className="font-semibold text-4xl">
+                      {exercise.details?.reps ?? "-"}
+                    </p>
+                  </>
+                )}
               </li>
               <li className="w-full flex flex-col gap-1 p-4 bg-lime-950 border border-neutral-200 rounded-2xl text-white">
                 <p className="font-medium">
-                  Target Metric: {exercise.details.targetMetric?.name ?? ""}
+                  {exercise.details?.targetMetric?.name || "Target Metric"}
                 </p>
-
-                <p className="font-semibold text-4xl">
-                  {exercise.details.targetMetric?.number ?? "-"}{" "}
-                  {exercise.details.targetMetric?.unit ?? "-"}
-                </p>
+                <div className="flex items-end gap-1">
+                  <p className="font-semibold text-4xl">
+                    {exercise.details?.targetMetric?.number ?? "-"}
+                  </p>
+                  <span className="text-2xl">
+                    {exercise.details?.targetMetric?.unit ?? ""}
+                  </span>
+                </div>
+                {exercise.details?.targetMetric?.type && (
+                  <p className="text-xs text-lime-200 capitalize">
+                    {exercise.details.targetMetric.type} target
+                  </p>
+                )}
               </li>
 
               <li className="w-full flex flex-col gap-1 p-4 bg-lime-950 border border-neutral-200 rounded-2xl text-white">
@@ -471,40 +846,210 @@ const StartExerciseBody: React.FC<BodyProps> = ({
               />
             </li>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {/* Sets Input */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <NumberInput
+                label="Sets"
+                value={sets}
+                onChange={setSets}
+                min={0}
+                placeholder="Number of sets"
+              />
+
+              {/* Rep Type Selection */}
               <li className="flex flex-col gap-1">
-                <label className="text-sm">Sets</label>
-                <input
-                  type="number"
-                  className="h-12 rounded-2xl border border-neutral-300 px-4 bg-black text-white "
-                  value={typeof sets === "number" ? sets : ""}
-                  onChange={(e) =>
-                    setSets(e.target.value ? Number(e.target.value) : undefined)
-                  }
-                />
-              </li>
-              <li className="flex flex-col gap-1">
-                <label className="text-sm">Reps / Range (e.g. 8 or 6-10)</label>
-                <input
+                <label className="text-sm">Rep Type</label>
+                <select
                   className="h-12 rounded-2xl border border-neutral-300 px-4 bg-black text-white"
-                  value={reps ?? ""}
-                  onChange={(e) => setReps(e.target.value)}
-                />
-              </li>
-              <li className="flex flex-col gap-1">
-                <label className="text-sm">Rest (secs)</label>
-                <input
-                  type="number"
-                  className="h-12 rounded-2xl border border-neutral-300 px-4 bg-black text-white"
-                  value={typeof restSecs === "number" ? restSecs : ""}
-                  onChange={(e) =>
-                    setRestSecs(
-                      e.target.value ? Number(e.target.value) : undefined
-                    )
-                  }
-                />
+                  value={repType}
+                  onChange={(e) => setRepType(e.target.value)}
+                >
+                  <option value="number">Fixed Number</option>
+                  <option value="repRange">Rep Range</option>
+                  <option value="duration">Duration</option>
+                  <option value="distance">Distance</option>
+                  <option value="time">Time</option>
+                  <option value="timeRange">Time Range</option>
+                  <option value="other">Other</option>
+                </select>
               </li>
             </div>
+
+            {/* Conditional Rep Inputs Based on Type */}
+            {repType === "number" && (
+              <NumberInput
+                label="Number of Reps"
+                value={repNumber}
+                onChange={setRepNumber}
+                min={0}
+                placeholder="Reps per set"
+              />
+            )}
+
+            {repType === "repRange" && (
+              <div className="grid grid-cols-2 gap-3">
+                <NumberInput
+                  label="Min Reps"
+                  value={repRange.min}
+                  onChange={(value) =>
+                    setRepRange((prev) => ({ ...prev, min: value }))
+                  }
+                  min={0}
+                  placeholder="Minimum reps"
+                />
+                <NumberInput
+                  label="Max Reps"
+                  value={repRange.max}
+                  onChange={(value) =>
+                    setRepRange((prev) => ({ ...prev, max: value }))
+                  }
+                  min={repRange.min || 0}
+                  placeholder="Maximum reps"
+                />
+                {repRange.min !== undefined &&
+                  repRange.max !== undefined &&
+                  repRange.min >= repRange.max && (
+                    <p className="col-span-2 text-red-400 text-sm">
+                      Min reps must be less than max reps
+                    </p>
+                  )}
+              </div>
+            )}
+
+            {repType === "duration" && (
+              <div className="grid grid-cols-2 gap-3">
+                <NumberInput
+                  label="Duration"
+                  value={repDuration.time}
+                  onChange={(value) =>
+                    setRepDuration((prev) => ({ ...prev, time: value }))
+                  }
+                  min={0}
+                  placeholder="Duration amount"
+                />
+                <li className="flex flex-col gap-1">
+                  <label className="text-sm">Duration Unit</label>
+                  <select
+                    className="h-12 rounded-2xl border border-neutral-300 px-4 bg-black text-white"
+                    value={repDuration.unit}
+                    onChange={(e) =>
+                      setRepDuration((prev) => ({
+                        ...prev,
+                        unit: e.target.value,
+                      }))
+                    }
+                  >
+                    <option value="seconds">Seconds</option>
+                    <option value="minutes">Minutes</option>
+                    <option value="hours">Hours</option>
+                  </select>
+                </li>
+              </div>
+            )}
+
+            {repType === "distance" && (
+              <div className="grid grid-cols-2 gap-3">
+                <NumberInput
+                  label="Distance"
+                  value={repDistance.distance}
+                  onChange={(value) =>
+                    setRepDistance((prev) => ({ ...prev, distance: value }))
+                  }
+                  min={0}
+                  placeholder="Distance amount"
+                />
+                <li className="flex flex-col gap-1">
+                  <label className="text-sm">Distance Unit</label>
+                  <select
+                    className="h-12 rounded-2xl border border-neutral-300 px-4 bg-black text-white"
+                    value={repDistance.unit}
+                    onChange={(e) =>
+                      setRepDistance((prev) => ({
+                        ...prev,
+                        unit: e.target.value,
+                      }))
+                    }
+                  >
+                    <option value="meters">Meters</option>
+                    <option value="kilometers">Kilometers</option>
+                    <option value="feet">Feet</option>
+                    <option value="miles">Miles</option>
+                    <option value="yards">Yards</option>
+                  </select>
+                </li>
+              </div>
+            )}
+
+            {/* Rest Time Inputs */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="flex flex-col gap-3">
+                <h3 className="text-sm font-medium">Rest Between Sets</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  <NumberInput
+                    label="Time"
+                    value={restTimeSets.time}
+                    onChange={(value) =>
+                      setRestTimeSets((prev) => ({ ...prev, time: value }))
+                    }
+                    min={0}
+                    placeholder="Rest time"
+                  />
+                  <li className="flex flex-col gap-1">
+                    <label className="text-sm">Unit</label>
+                    <select
+                      className="h-12 rounded-2xl border border-neutral-300 px-4 bg-black text-white"
+                      value={restTimeSets.unit}
+                      onChange={(e) =>
+                        setRestTimeSets((prev) => ({
+                          ...prev,
+                          unit: e.target.value,
+                        }))
+                      }
+                    >
+                      <option value="seconds">Seconds</option>
+                      <option value="minutes">Minutes</option>
+                    </select>
+                  </li>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <h3 className="text-sm font-medium">Rest Between Reps</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  <NumberInput
+                    label="Time"
+                    value={restTimeReps.time}
+                    onChange={(value) =>
+                      setRestTimeReps((prev) => ({ ...prev, time: value }))
+                    }
+                    min={0}
+                    placeholder="Rest time"
+                  />
+                  <li className="flex flex-col gap-1">
+                    <label className="text-sm">Unit</label>
+                    <select
+                      className="h-12 rounded-2xl border border-neutral-300 px-4 bg-black text-white"
+                      value={restTimeReps.unit}
+                      onChange={(e) =>
+                        setRestTimeReps((prev) => ({
+                          ...prev,
+                          unit: e.target.value,
+                        }))
+                      }
+                    >
+                      <option value="seconds">Seconds</option>
+                      <option value="minutes">Minutes</option>
+                    </select>
+                  </li>
+                </div>
+              </div>
+            </div>
+
+            {/* Target Metric Input */}
+            <TargetMetricInput
+              targetMetric={targetMetric}
+              onChange={setTargetMetric}
+            />
 
             <li className="flex flex-col gap-1">
               <label className="text-sm">
@@ -611,10 +1156,10 @@ const Page = () => {
     <PageContainer>
       <main className="w-full h-full min-h-dvh relative">
         <StartExerciseHeader
-          title={currExercise.title}
-          tags={currExercise.tags}
+          title={currExercise.title ?? ""}
+          tags={currExercise.tags ?? []}
           imageUrl={currExercise.image ?? null}
-          id={currExercise.id}
+          id={currExercise.id ?? ""}
           description={currExercise.description ?? ""}
           author={
             currExercise.author === "global" ? "FitForge" : user?.name ?? "You"
