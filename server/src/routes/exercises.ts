@@ -95,14 +95,74 @@ router.get("/:id", async (req, res) => {
 // ---------- Create ONE user exercise ----------
 const DetailsSchema = z.object({
   sets: z.number().int().min(1).max(20).optional(),
-  reps: z
-    .union([
-      z.number().int().min(1).max(999),
-      z.string().regex(/^\d{1,3}-\d{1,3}$/),
+  repType: z
+    .enum([
+      "number",
+      "duration",
+      "distance",
+      "time",
+      "repRange",
+      "timeRange",
+      "other",
     ])
     .optional(),
-  durationSecs: z.number().int().min(1).max(36000).optional(),
-  restSecs: z.number().int().min(0).max(600).optional(),
+  repNumber: z.number().int().min(1).max(999).optional(),
+  repRange: z
+    .object({
+      min: z.number().int().min(1).max(999).optional(),
+      max: z.number().int().min(1).max(999).optional(),
+    })
+    .optional(),
+  timeRange: z
+    .object({
+      min: z
+        .object({
+          time: z.number().int().min(1).optional(),
+          unit: z.string().max(10).optional(),
+        })
+        .optional(),
+      max: z
+        .object({
+          time: z.number().int().min(1).optional(),
+          unit: z.string().max(10).optional(),
+        })
+        .optional(),
+    })
+    .optional(),
+  repDuration: z
+    .object({
+      time: z.number().int().min(1).optional(),
+      unit: z.string().max(10).optional(),
+    })
+    .optional(),
+  repDistance: z
+    .object({
+      distance: z.number().min(0).optional(),
+      unit: z.string().max(10).optional(),
+    })
+    .optional(),
+  restTimeSets: z
+    .object({
+      time: z.number().int().min(0).optional(),
+      unit: z.string().max(10).optional(),
+    })
+    .optional(),
+  restTimeReps: z
+    .object({
+      time: z.number().int().min(0).optional(),
+      unit: z.string().max(10).optional(),
+    })
+    .optional(),
+  targetMetric: z
+    .object({
+      type: z.string().max(50).optional(),
+      unit: z.string().max(20).optional(),
+      number: z.number().optional(),
+      name: z.string().max(100).optional(),
+    })
+    .optional(),
+  //durationSecs: z.number().int().min(1).max(36000).optional(),
+  //restSecs: z.number().int().min(0).max(600).optional(),
   equipment: z.array(z.string().max(40)).max(20).optional(),
 });
 
@@ -142,9 +202,15 @@ router.post("/", async (req, res, next) => {
       demoUrl: typeof dto.demoUrl === "undefined" ? null : dto.demoUrl,
       details: {
         sets: dto.details?.sets,
-        reps: dto.details?.reps,
-        durationSecs: dto.details?.durationSecs,
-        restSecs: dto.details?.restSecs,
+        repType: dto.details?.repType,
+        repNumber: dto.details?.repNumber,
+        repRange: dto.details?.repRange,
+        timeRange: dto.details?.timeRange,
+        repDuration: dto.details?.repDuration,
+        repDistance: dto.details?.repDistance,
+        restTimeSets: dto.details?.restTimeSets,
+        restTimeReps: dto.details?.restTimeReps,
+        targetMetric: dto.details?.targetMetric,
         equipment: dto.details?.equipment ?? [],
       },
     });
@@ -196,9 +262,18 @@ router.patch("/:id", async (req, res, next) => {
       doc.details = {
         ...doc.details,
         sets: dto.details?.sets,
-        reps: dto.details?.reps,
-        durationSecs: dto.details?.durationSecs,
-        restSecs: dto.details?.restSecs,
+        repType: dto.details?.repType,
+        repNumber: dto.details?.repNumber,
+        repRange: dto.details?.repRange,
+        timeRange: dto.details?.timeRange,
+        repDuration: dto.details?.repDuration,
+        repDistance: dto.details?.repDistance,
+        restTimeSets: dto.details?.restTimeSets,
+        restTimeReps: dto.details?.restTimeReps,
+        targetMetric: dto.details?.targetMetric,
+        //reps: dto.details?.reps,
+        //durationSecs: dto.details?.durationSecs,
+        //restSecs: dto.details?.restSecs,
         equipment: dto.details?.equipment ?? [],
       } as any;
     }

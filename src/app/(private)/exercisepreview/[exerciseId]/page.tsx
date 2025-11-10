@@ -135,6 +135,27 @@ const StartExerciseBody: React.FC<BodyProps> = ({
   const [equipmentInput, setEquipmentInput] = useState(
     toStringList(exercise.details?.equipment as any)
   );
+  //new features of exercises
+  const [repType, setRepType] = useState<string>(
+    (exercise.details?.repType ?? "") as string
+  );
+  const [repNumber, setRepNumber] = useState<number | undefined>(
+    exercise.details?.repNumber ?? undefined
+  );
+  const [repRange, setRepRange] = useState<{
+    min: number | null;
+    max: number | null;
+  }>({
+    min: exercise.details.repRange?.min ?? null,
+    max: exercise.details.repRange?.max ?? null,
+  });
+  const [timeRange, setTimeRange] = useState<{
+    min: any | null;
+    max: any | null;
+  }>({
+    min: exercise.details.timeRange?.min ?? null,
+    max: exercise.details.timeRange?.max ?? null,
+  });
 
   // If exercise changes (nav), sync local edit state
   useEffect(() => {
@@ -241,7 +262,9 @@ const StartExerciseBody: React.FC<BodyProps> = ({
 
   return (
     <div className="w-full h-full p-4 py-8 flex flex-col gap-4 bg-linear-180 from-lime-950 to-lime-400">
-      <div className="w-full max-w-[600px] mx-auto h-auto aspect-video bg-neutral-500 rounded-2xl" />
+      {false && (
+        <div className="w-full max-w-[600px] mx-auto h-auto aspect-video bg-neutral-500 rounded-2xl" />
+      )}
       {/* ----- VIEW MODE ----- */}
       {!isEditing && (
         <>
@@ -249,27 +272,93 @@ const StartExerciseBody: React.FC<BodyProps> = ({
             <h2 className="text-sm md:text-base font-medium">
               Exercise Details
             </h2>
-            <ul className="w-full flex flex-wrap gap-4">
-              <li className="w-fit grow min-w-[250px] flex flex-col gap-1 p-4 bg-black border border-neutral-200 rounded-2xl text-white">
-                <p className="font-medium">Number of Sets</p>
+            <ul className="w-full grid grid-cols-1 min-[375px]:grid-cols-2 lg:grid-cols-3 gap-4">
+              <li className="w-full flex flex-col gap-1 p-4 bg-lime-950 border border-neutral-200 rounded-2xl text-white">
+                <p className="font-medium">Sets</p>
                 <p className="font-semibold text-4xl">
                   {exercise.details?.sets ?? "-"}
                 </p>
               </li>
-              <li className="w-fit grow min-w-[250px] flex flex-col gap-1 p-4 bg-black border border-neutral-200 rounded-2xl text-white">
-                <p className="font-medium">Reps</p>
-                <p className="text-4xl">
-                  {(exercise.details?.reps as any) ?? "-"}
+              <li className="w-full flex flex-col gap-1 p-4 bg-lime-950 border border-neutral-200 rounded-2xl text-white">
+                {repType === "number" && (
+                  <>
+                    <p className="font-medium">Reps</p>{" "}
+                    <p className="font-semibold text-4xl">{repNumber}</p>
+                  </>
+                )}
+                {repType === "repRange" && (
+                  <>
+                    <p className="font-medium">Rep Range</p>{" "}
+                    <p className="font-semibold text-4xl">
+                      {repRange.min}
+                      {" - "}
+                      {repRange.max}
+                    </p>
+                  </>
+                )}
+                {repType === "distance" && (
+                  <>
+                    <p className="font-medium">Distance</p>
+                    <p className="font-semibold text-4xl">
+                      {exercise.details?.repDistance?.distance ?? "-"}{" "}
+                      {exercise.details?.repDistance?.unit ?? ""}
+                    </p>
+                  </>
+                )}
+                {repType === "timeRange" && (
+                  <>
+                    <p className="font-medium">Time Range</p>{" "}
+                    <p className="font-semibold text-4xl">
+                      {timeRange.min}
+                      {" - "}
+                      {timeRange.max}
+                    </p>
+                  </>
+                )}
+                {repType === "duration" && (
+                  <>
+                    <p className="font-medium">Duration</p>{" "}
+                    <p className="font-semibold text-4xl">
+                      {exercise.details?.repDuration?.time ?? "-"}{" "}
+                      {exercise.details?.repDuration?.unit ?? ""}
+                    </p>
+                  </>
+                )}
+              </li>
+              <li className="w-full flex flex-col gap-1 p-4 bg-lime-950 border border-neutral-200 rounded-2xl text-white">
+                <p className="font-medium">
+                  Target Metric: {exercise.details.targetMetric?.name ?? ""}
+                </p>
+
+                <p className="font-semibold text-4xl">
+                  {exercise.details.targetMetric?.number ?? "-"}{" "}
+                  {exercise.details.targetMetric?.unit ?? "-"}
                 </p>
               </li>
-              <li className="w-fit grow min-w-[250px] flex flex-col gap-1 p-4 bg-black border border-neutral-200 rounded-2xl text-white">
-                <p className="font-medium">Rest time in between</p>
-                <p className="text-4xl">
-                  {exercise.details?.restSecs ?? "-"}
-                  {exercise.details?.restSecs != null ? "s" : ""}
-                </p>
+
+              <li className="w-full flex flex-col gap-1 p-4 bg-lime-950 border border-neutral-200 rounded-2xl text-white">
+                <p className="font-medium">Rest time between Sets</p>
+                <div className="flex items-end gap-1">
+                  <p className="text-4xl">
+                    {exercise.details?.restTimeSets?.time ?? "0"}{" "}
+                  </p>
+                  <span className="text-2xl">
+                    {exercise.details?.restTimeSets?.unit?.slice(0, 3) ?? ""}
+                  </span>
+                </div>
               </li>
-              <li className="w-full flex flex-col gap-1">
+              <li className="w-full flex flex-col gap-1 p-4 bg-lime-950 border border-neutral-200 rounded-2xl text-white">
+                <p className="font-medium">Rest time between Reps</p>
+                <div className="flex items-end gap-1">
+                  <p className="text-4xl">
+                    {exercise.details?.restTimeReps?.time ?? "0"}
+                  </p>
+                  <span className="text-2xl">
+                    {exercise.details?.restTimeReps?.unit?.slice(0, 3) ?? ""}
+                  </span>
+                </div>
+              </li>
+              <li className="w-full grow flex flex-col gap-1 col-span-full">
                 <p className="font-medium">Equipment You Will Need</p>
                 <ul className="list-disc flex flex-col pl-4">
                   {equipmentList.length > 0 ? (
@@ -282,7 +371,10 @@ const StartExerciseBody: React.FC<BodyProps> = ({
             </ul>
           </div>
 
-          <div className="w-full mt-4 flex flex-col items-center gap-4">
+          <div
+            className="w-full mt-4 flex flex-col items-center gap-4 
+           "
+          >
             <div className="w-full h-[64px] flex items-center gap-1">
               <button
                 disabled={!canEdit}

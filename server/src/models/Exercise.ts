@@ -17,15 +17,69 @@ const ExerciseSchema = new Schema(
     details: {
       sets: { type: Number }, // default sets (optional)
       reps: { type: Schema.Types.Mixed }, // number or "6-10"
-      durationSecs: { type: Number }, // for timed moves
-      restSecs: { type: Number },
+      restSecs: { type: Number }, // default rest seconds (optional)
+      //durationSecs: { type: Number }, // for timed moves
+      //Created additional fields to improve exercise experience and track better metrics
+      repType: {
+        type: String,
+        enum: [
+          "number",
+          "duration",
+          "distance",
+          "time",
+          "repRange",
+          "timeRange",
+          "other",
+        ],
+        default: "number",
+      },
+      repNumber: { type: Number, required: false },
+      repRange: {
+        min: { type: Number, required: false },
+        max: { type: Number, required: false },
+      },
+      timeRange: {
+        min: {
+          time: { type: Number, required: false },
+          unit: { type: String, required: false },
+        },
+        max: {
+          time: { type: Number, required: false },
+          unit: { type: String, required: false },
+        },
+      },
+      repDuration: {
+        time: { type: Number, required: false },
+        unit: { type: String, required: false },
+      },
+      repDistance: {
+        distance: { type: Number, required: false },
+        unit: { type: String, required: false },
+      },
+
+      restTimeSets: {
+        time: { type: Number, required: false },
+        unit: { type: String, required: false },
+      },
+      restTimeReps: {
+        time: { type: Number, required: false },
+        unit: { type: String, required: false },
+      },
+      targetMetric: {
+        type: { type: String, required: false },
+        unit: { type: String, required: false },
+        number: { type: Number, required: false },
+        name: { type: String, required: false },
+      },
       equipment: { type: [String], default: [] },
     },
+    schemaVersion: { type: Number, default: 1 },
   },
   { timestamps: true }
 );
 
 ExerciseSchema.index({ author: 1, title: 1 });
+ExerciseSchema.index({ schemaVersion: 1 });
 
 export type ExerciseDoc = InferSchemaType<typeof ExerciseSchema>;
 export default model<ExerciseDoc>("Exercise", ExerciseSchema);

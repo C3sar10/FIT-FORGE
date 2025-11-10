@@ -280,8 +280,8 @@ const WorkoutPlayer = (props: Props) => {
                 exerciseId: exercise.id,
                 name: exercise.title,
                 sets: exercise.details.sets,
-                reps: exercise.details.reps,
-                restSecs: exercise.details.restSecs,
+                reps: exercise.details.reps ?? "",
+                restSecs: exercise.details.restSecs ?? 0,
               })),
               exercisesCompleted: [],
               type:

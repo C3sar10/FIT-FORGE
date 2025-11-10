@@ -28,9 +28,27 @@ export interface ExerciseType {
   description: string;
   details: {
     sets: number;
-    reps: string;
-    restSecs: number;
-    equipment: String[];
+    reps?: string;
+    restSecs?: number;
+    // new details
+    repType?: string;
+    repNumber?: number;
+    repRange?: { min: number | null; max: number | null };
+    timeRange?: {
+      min: { time: number | null; unit: string | null };
+      max: { time: number | null; unit: string | null };
+    };
+    repDuration?: { time: number | null; unit: string | null };
+    repDistance?: { distance: number | null; unit: string | null };
+    restTimeSets?: { time: number | null; unit: string | null };
+    restTimeReps?: { time: number | null; unit: string | null };
+    targetMetric?: {
+      type: string | null;
+      unit: string | null;
+      number: number | null;
+      name: string | null;
+    };
+    equipment: string[];
   };
   id: string;
   image: string;

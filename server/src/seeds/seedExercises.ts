@@ -8,9 +8,44 @@ type ExerciseSeedOpts = {
   tags?: string[];
   description?: string;
   sets?: number;
-  reps?: number | string | null;
-  durationSecs?: number | null;
-  restSecs?: number;
+  repType?:
+    | "number"
+    | "duration"
+    | "repRange"
+    | "timeRange"
+    | "timeRange"
+    | "other";
+  repNumber?: number;
+  repRange?: {
+    min: number | null;
+    max: number | null;
+  };
+  timeRange?: {
+    min: any | null;
+    max: any | null;
+  };
+  repDuration?: {
+    time: number | null;
+    unit: string | null;
+  };
+  repDistance?: {
+    distance: number | null;
+    unit: string | null;
+  };
+  restTimeSets?: {
+    time: number | null;
+    unit: string | null;
+  };
+  restTimeReps?: {
+    time: number | null;
+    unit: string | null;
+  };
+  targetMetric?: {
+    type: string | null;
+    unit: string | null;
+    number: number | null;
+    name: string | null;
+  };
   equipment?: string[];
   image?: string | null;
   demoUrl?: string | null;
@@ -26,9 +61,15 @@ const ex = (title: string, opts: ExerciseSeedOpts = {}) => ({
   demoUrl: typeof opts.demoUrl === "undefined" ? null : opts.demoUrl,
   details: {
     sets: opts.sets,
-    reps: opts.reps ?? undefined,
-    durationSecs: opts.durationSecs ?? undefined,
-    restSecs: opts.restSecs,
+    repType: opts.repType,
+    repNumber: opts.repNumber,
+    repRange: opts.repRange,
+    timeRange: opts.timeRange,
+    repDuration: opts.repDuration,
+    repDistance: opts.repDistance,
+    restTimeSets: opts.restTimeSets,
+    restTimeReps: opts.restTimeReps,
+    targetMetric: opts.targetMetric,
     equipment: opts.equipment ?? [],
   },
 });
@@ -39,37 +80,72 @@ const SEEDS = [
     tags: ["chest", "push", "barbell", "featured"],
     description: "Barbell press performed lying on a flat bench.",
     sets: 3,
-    reps: "6-10",
-    restSecs: 120,
+    repType: "repRange",
+    repRange: {
+      min: 6,
+      max: 10,
+    },
+    restTimeSets: {
+      time: 120,
+      unit: "seconds",
+    },
     equipment: ["barbell", "bench", "plates"],
     image: "/exercises/bench-press.jpg",
   }),
   ex("Incline Dumbbell Press", {
     tags: ["chest", "push", "dumbbell"],
     sets: 3,
-    reps: "8-12",
-    restSecs: 90,
+    repType: "repRange",
+    repRange: {
+      min: 8,
+      max: 12,
+    },
+    restTimeSets: {
+      time: 120,
+      unit: "seconds",
+    },
     equipment: ["dumbbells", "bench"],
   }),
   ex("Overhead Press", {
     tags: ["shoulders", "push", "barbell"],
     sets: 3,
-    reps: "6-10",
-    restSecs: 120,
+    repType: "repRange",
+    repRange: {
+      min: 6,
+      max: 10,
+    },
+    restTimeSets: {
+      time: 120,
+      unit: "seconds",
+    },
     equipment: ["barbell", "plates"],
   }),
   ex("Dumbbell Shoulder Press", {
     tags: ["shoulders", "push", "dumbbell"],
     sets: 3,
-    reps: "8-12",
-    restSecs: 90,
+    repType: "repRange",
+    repRange: {
+      min: 8,
+      max: 12,
+    },
+    restTimeSets: {
+      time: 90,
+      unit: "seconds",
+    },
     equipment: ["dumbbells", "bench"],
   }),
   ex("Push-Up", {
     tags: ["chest", "push", "bodyweight", "featured"],
     sets: 3,
-    reps: "10-20",
-    restSecs: 60,
+    repType: "repRange",
+    repRange: {
+      min: 10,
+      max: 20,
+    },
+    restTimeSets: {
+      time: 60,
+      unit: "seconds",
+    },
     equipment: [],
     image: "/exercises/pushup.jpg",
   }),
@@ -78,37 +154,73 @@ const SEEDS = [
   ex("Pull-Up", {
     tags: ["back", "pull", "bodyweight", "featured"],
     sets: 3,
-    reps: "5-10",
-    restSecs: 120,
+    repType: "repRange",
+    repRange: {
+      min: 5,
+      max: 10,
+    },
+    restTimeSets: {
+      time: 120,
+      unit: "seconds",
+    },
+    equipment: ["pull-up bar"],
     image: "/exercises/pull-ups.jpg",
   }),
   ex("Lat Pulldown", {
     tags: ["back", "pull", "machine", "featured"],
     sets: 3,
-    reps: "8-12",
-    restSecs: 90,
+    repType: "repRange",
+    repRange: {
+      min: 8,
+      max: 12,
+    },
+    restTimeSets: {
+      time: 90,
+      unit: "seconds",
+    },
     equipment: ["pulldown machine"],
-    image: "/exercises/pull-ups.jpg",
+    image: "/exercises/lat-pulldown.jpg",
   }),
   ex("Barbell Row", {
     tags: ["back", "pull", "barbell"],
     sets: 3,
-    reps: "6-10",
-    restSecs: 120,
+    repType: "repRange",
+    repRange: {
+      min: 6,
+      max: 10,
+    },
+    restTimeSets: {
+      time: 120,
+      unit: "seconds",
+    },
     equipment: ["barbell", "plates"],
   }),
   ex("One-Arm Dumbbell Row", {
     tags: ["back", "pull", "dumbbell"],
     sets: 3,
-    reps: "8-12",
-    restSecs: 90,
+    repType: "repRange",
+    repRange: {
+      min: 8,
+      max: 12,
+    },
+    restTimeSets: {
+      time: 90,
+      unit: "seconds",
+    },
     equipment: ["dumbbell", "bench"],
   }),
   ex("Face Pull", {
     tags: ["rear delts", "upper back", "cable"],
     sets: 3,
-    reps: "12-15",
-    restSecs: 60,
+    repType: "repRange",
+    repRange: {
+      min: 12,
+      max: 15,
+    },
+    restTimeSets: {
+      time: 60,
+      unit: "seconds",
+    },
     equipment: ["cable", "rope"],
   }),
 
@@ -116,38 +228,70 @@ const SEEDS = [
   ex("Back Squat", {
     tags: ["legs", "quad", "barbell", "featured"],
     sets: 3,
-    reps: "5-8",
-    restSecs: 180,
+    repType: "repRange",
+    repRange: {
+      min: 5,
+      max: 8,
+    },
+    restTimeSets: {
+      time: 180,
+      unit: "seconds",
+    },
     equipment: ["barbell", "rack", "plates"],
     image: "/exercises/barbell-squat.jpg",
   }),
   ex("Deadlift", {
     tags: ["posterior chain", "barbell", "featured"],
     sets: 3,
-    reps: "3-5",
-    restSecs: 180,
+    repType: "repRange",
+    repRange: {
+      min: 3,
+      max: 5,
+    },
+    restTimeSets: {
+      time: 180,
+      unit: "seconds",
+    },
     equipment: ["barbell", "plates"],
     image: "/exercises/deadlift.jpg",
   }),
   ex("Romanian Deadlift (RDL)", {
     tags: ["hamstrings", "glutes", "barbell"],
     sets: 3,
-    reps: "6-10",
-    restSecs: 150,
+    repType: "repRange",
+    repRange: {
+      min: 6,
+      max: 10,
+    },
+    restTimeSets: {
+      time: 150,
+      unit: "seconds",
+    },
     equipment: ["barbell", "plates"],
   }),
   ex("Leg Press", {
     tags: ["legs", "quad", "machine"],
     sets: 3,
-    reps: "10-15",
-    restSecs: 120,
+    repType: "repRange",
+    repRange: {
+      min: 10,
+      max: 15,
+    },
+    restTimeSets: {
+      time: 120,
+      unit: "seconds",
+    },
     equipment: ["leg press machine"],
   }),
   ex("Walking Lunge", {
     tags: ["legs", "glutes", "dumbbell"],
     sets: 3,
-    reps: "20",
-    restSecs: 90,
+    repType: "number",
+    repNumber: 20,
+    restTimeSets: {
+      time: 90,
+      unit: "seconds",
+    },
     equipment: ["dumbbells"],
     image: "/exercises/walking-lunges.jpg",
   }),
@@ -156,38 +300,73 @@ const SEEDS = [
   ex("Bicep Curl (Dumbbell)", {
     tags: ["biceps", "dumbbell"],
     sets: 3,
-    reps: "10-15",
-    restSecs: 60,
+    repType: "repRange",
+    repRange: {
+      min: 10,
+      max: 15,
+    },
+    restTimeSets: {
+      time: 60,
+      unit: "seconds",
+    },
     equipment: ["dumbbells"],
     image: "/exercises/dumbell-curls.jpg",
   }),
   ex("Tricep Pushdown", {
     tags: ["triceps", "cable"],
     sets: 3,
-    reps: "10-15",
-    restSecs: 60,
+    repType: "repRange",
+    repRange: {
+      min: 10,
+      max: 15,
+    },
+    restTimeSets: {
+      time: 60,
+      unit: "seconds",
+    },
     equipment: ["cable", "straight bar or rope"],
   }),
   ex("Lateral Raise", {
     tags: ["shoulders", "dumbbell"],
     sets: 3,
-    reps: "12-15",
-    restSecs: 60,
+    repType: "repRange",
+    repRange: {
+      min: 12,
+      max: 15,
+    },
+    restTimeSets: {
+      time: 60,
+      unit: "seconds",
+    },
     equipment: ["dumbbells"],
   }),
   ex("Plank", {
     tags: ["core", "bodyweight"],
     sets: 3,
-    reps: null,
-    durationSecs: 45,
-    restSecs: 60,
+    repType: "duration",
+    repDuration: {
+      time: 45,
+      unit: "seconds",
+    },
+    restTimeSets: {
+      time: 60,
+      unit: "seconds",
+    },
+    equipment: [],
     image: "/exercises/plank.jpg",
   }),
   ex("Hanging Leg Raise", {
     tags: ["core", "bodyweight"],
     sets: 3,
-    reps: "8-12",
-    restSecs: 60,
+    repType: "repRange",
+    repRange: {
+      min: 8,
+      max: 12,
+    },
+    restTimeSets: {
+      time: 60,
+      unit: "seconds",
+    },
     equipment: ["pull-up bar"],
     image: "/exercises/hanging-leg-raise.jpg",
   }),
