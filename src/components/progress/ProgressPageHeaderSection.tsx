@@ -505,11 +505,11 @@ const ProgressPageHeaderSection = (props: Props) => {
         <div
           className={`w-full h-full flex flex-col items-center justify-center ${
             isLight ? "bg-white" : "bg-[#1e1e1e]"
-          } pt-12 pb-6 rounded-t-[8px]`}
+          } pt-12 pb-0 rounded-t-[8px]`}
         >
           <ResponsiveContainer
             width={"100%"}
-            height={300}
+            height={200}
             className={"block md:hidden"}
           >
             {viewMode === "month" ? (
@@ -675,7 +675,7 @@ const ProgressPageHeaderSection = (props: Props) => {
           </span>
         </span>
       </div>
-      <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+      <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
         <div className="hidden md:flex">
           <StatsCard
             icon={<Clock color="#65A30D" size={28} />}
