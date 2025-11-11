@@ -35,12 +35,43 @@ const FormPages: React.FC<FormPagesProps> = ({
     const [exerDescription, setExerDescription] = useState("");
     const [exerTags, setExerTags] = useState<string[]>([]);
     const [exerTag, setExerTag] = useState<string>("");
-    // page 2 variables
+    // page 2 variables - Enhanced for v2
     const [numSets, setNumSets] = useState(0);
     const [reps, setReps] = useState("");
     const [restSecs, setRestSecs] = useState(0);
     const [equipList, setEquipList] = useState<string[]>([]);
     const [newEquip, setNewEquip] = useState("");
+
+    // New v2 fields
+    const [repType, setRepType] = useState<string>("number");
+    const [repNumber, setRepNumber] = useState<number>(0);
+    const [repRange, setRepRange] = useState({ min: 0, max: 0 });
+    const [repDuration, setRepDuration] = useState({
+      time: 0,
+      unit: "seconds",
+    });
+    const [repDistance, setRepDistance] = useState({
+      distance: 0,
+      unit: "meters",
+    });
+    const [timeRange, setTimeRange] = useState({
+      min: { time: 0, unit: "seconds" },
+      max: { time: 0, unit: "seconds" },
+    });
+    const [restTimeSets, setRestTimeSets] = useState({
+      time: 0,
+      unit: "seconds",
+    });
+    const [restTimeReps, setRestTimeReps] = useState({
+      time: 0,
+      unit: "seconds",
+    });
+    const [targetMetric, setTargetMetric] = useState({
+      type: "",
+      unit: "",
+      number: 0,
+      name: "",
+    });
 
     const handleAddNewTag = () => {
       if (exerTag === "" || exerTags.length >= 5 || exerTags.includes(exerTag))
@@ -90,12 +121,40 @@ const FormPages: React.FC<FormPagesProps> = ({
         try {
           if (numSets <= 0)
             throw new Error("Sets can't be less than or equal to 0.");
-          if (reps === "") throw new Error("Missing Exercise reps/rep range.");
-          if (restSecs < 0)
-            throw new Error("Rest Seconds cannot be less than 0");
-          else {
-            setCurrPage(currPage + 1);
-          }
+
+          // Validate based on rep type
+          if (repType === "number" && repNumber <= 0)
+            throw new Error("Rep number must be greater than 0.");
+          if (
+            repType === "repRange" &&
+            (repRange.min <= 0 ||
+              repRange.max <= 0 ||
+              repRange.min >= repRange.max)
+          )
+            throw new Error(
+              "Rep range must have valid min and max values (min < max, both > 0)."
+            );
+          if (repType === "duration" && repDuration.time <= 0)
+            throw new Error("Duration must be greater than 0.");
+          if (repType === "distance" && repDistance.distance <= 0)
+            throw new Error("Distance must be greater than 0.");
+          if (
+            repType === "timeRange" &&
+            (timeRange.min.time <= 0 ||
+              timeRange.max.time <= 0 ||
+              timeRange.min.time >= timeRange.max.time)
+          )
+            throw new Error("Time range must have valid min and max values.");
+          if (repType === "other" && reps === "")
+            throw new Error("Please provide a rep description.");
+
+          if (restTimeSets.time < 0 || restTimeReps.time < 0)
+            throw new Error("Rest time cannot be negative.");
+
+          // Update legacy restSecs for backward compatibility
+          setRestSecs(restTimeSets.time || 60);
+
+          setCurrPage(currPage + 1);
         } catch (error: any) {
           setErrorMessage(error?.message || "Something went wrong");
         }
@@ -130,7 +189,18 @@ const FormPages: React.FC<FormPagesProps> = ({
             reps: reps,
             restSecs: restSecs,
             equipment: equipList,
+            // v2 Enhanced fields
+            repType: repType,
+            repNumber: repType === "number" ? repNumber : undefined,
+            repRange: repType === "repRange" ? repRange : undefined,
+            timeRange: repType === "timeRange" ? timeRange : undefined,
+            repDuration: repType === "duration" ? repDuration : undefined,
+            repDistance: repType === "distance" ? repDistance : undefined,
+            restTimeSets: restTimeSets.time > 0 ? restTimeSets : undefined,
+            restTimeReps: restTimeReps.time > 0 ? restTimeReps : undefined,
+            targetMetric: targetMetric.type ? targetMetric : undefined,
           },
+          schemaVersion: 2, // Mark as v2 exercise
         });
 
         if (createdExer.id) {
@@ -282,6 +352,12 @@ const FormPages: React.FC<FormPagesProps> = ({
               </h1>
             </div>
             <ul className="w-full flex flex-col items-center gap-4">
+              {/* Exercise Structure Section */}
+              <li className="w-full">
+                <h3 className="text-lg font-semibold text-neutral-700 mb-3 border-b border-neutral-200 pb-2">
+                  Exercise Structure
+                </h3>
+              </li>
               <li className="w-full flex flex-col relative items-start gap-1">
                 <label htmlFor="numSets" className="text-base font-medium">
                   Number of Sets
@@ -297,32 +373,386 @@ const FormPages: React.FC<FormPagesProps> = ({
                 />
               </li>
               <li className="w-full flex flex-col relative items-start gap-1">
-                <label htmlFor="reps" className="text-base font-medium">
-                  Reps or Rep range
+                <label htmlFor="repType" className="text-base font-medium">
+                  Rep Type
                 </label>
-                <input
-                  required
-                  value={reps}
-                  onChange={(e) => setReps(e.target.value)}
-                  type="text"
-                  name="reps"
-                  id="reps"
-                  className="w-full h-12 rounded-2xl border border-neutral-200 px-4 py-2 text-base"
-                />
+                <select
+                  value={repType}
+                  onChange={(e) => setRepType(e.target.value)}
+                  id="repType"
+                  name="repType"
+                  className="w-full h-12 rounded-2xl px-4 py-2 border border-neutral-200"
+                >
+                  <option value="number">Fixed Number</option>
+                  <option value="repRange">Rep Range</option>
+                  <option value="duration">Duration (Time-based)</option>
+                  <option value="distance">Distance</option>
+                  <option value="timeRange">Time Range</option>
+                  <option value="other">Other</option>
+                </select>
               </li>
-              <li className="w-full flex flex-col relative items-start gap-1">
-                <label htmlFor="restSecs" className="text-base font-medium">
-                  Rest Seconds
+
+              {/* Conditional Rep Input based on repType */}
+              {repType === "number" && (
+                <li className="w-full flex flex-col relative items-start gap-1">
+                  <label htmlFor="repNumber" className="text-base font-medium">
+                    Number of Reps
+                  </label>
+                  <input
+                    value={repNumber}
+                    onChange={(e) => setRepNumber(Number(e.target.value))}
+                    type="number"
+                    name="repNumber"
+                    id="repNumber"
+                    className="w-full h-12 rounded-2xl border border-neutral-200 px-4 py-2 text-base"
+                  />
+                </li>
+              )}
+
+              {repType === "repRange" && (
+                <li className="w-full flex flex-col relative items-start gap-1">
+                  <label className="text-base font-medium">Rep Range</label>
+                  <div className="w-full flex gap-2 items-center">
+                    <input
+                      value={repRange.min}
+                      onChange={(e) =>
+                        setRepRange({
+                          ...repRange,
+                          min: Number(e.target.value),
+                        })
+                      }
+                      type="number"
+                      placeholder="Min"
+                      className="flex-1 h-12 rounded-2xl border border-neutral-200 px-4 py-2 text-base"
+                    />
+                    <span className="text-neutral-500">to</span>
+                    <input
+                      value={repRange.max}
+                      onChange={(e) =>
+                        setRepRange({
+                          ...repRange,
+                          max: Number(e.target.value),
+                        })
+                      }
+                      type="number"
+                      placeholder="Max"
+                      className="flex-1 h-12 rounded-2xl border border-neutral-200 px-4 py-2 text-base"
+                    />
+                  </div>
+                </li>
+              )}
+
+              {repType === "duration" && (
+                <li className="w-full flex flex-col relative items-start gap-1">
+                  <label className="text-base font-medium">Duration</label>
+                  <div className="w-full flex gap-2 items-center">
+                    <input
+                      value={repDuration.time}
+                      onChange={(e) =>
+                        setRepDuration({
+                          ...repDuration,
+                          time: Number(e.target.value),
+                        })
+                      }
+                      type="number"
+                      placeholder="Time"
+                      className="flex-1 h-12 rounded-2xl border border-neutral-200 px-4 py-2 text-base"
+                    />
+                    <select
+                      value={repDuration.unit}
+                      onChange={(e) =>
+                        setRepDuration({ ...repDuration, unit: e.target.value })
+                      }
+                      className="w-32 h-12 rounded-2xl border border-neutral-200 px-4 py-2 text-base"
+                    >
+                      <option value="seconds">Seconds</option>
+                      <option value="minutes">Minutes</option>
+                      <option value="hours">Hours</option>
+                    </select>
+                  </div>
+                </li>
+              )}
+
+              {repType === "distance" && (
+                <li className="w-full flex flex-col relative items-start gap-1">
+                  <label className="text-base font-medium">Distance</label>
+                  <div className="w-full flex gap-2 items-center">
+                    <input
+                      value={repDistance.distance}
+                      onChange={(e) =>
+                        setRepDistance({
+                          ...repDistance,
+                          distance: Number(e.target.value),
+                        })
+                      }
+                      type="number"
+                      placeholder="Distance"
+                      className="flex-1 h-12 rounded-2xl border border-neutral-200 px-4 py-2 text-base"
+                    />
+                    <select
+                      value={repDistance.unit}
+                      onChange={(e) =>
+                        setRepDistance({ ...repDistance, unit: e.target.value })
+                      }
+                      className="w-32 h-12 rounded-2xl border border-neutral-200 px-4 py-2 text-base"
+                    >
+                      <option value="meters">Meters</option>
+                      <option value="kilometers">Kilometers</option>
+                      <option value="miles">Miles</option>
+                      <option value="yards">Yards</option>
+                      <option value="feet">Feet</option>
+                    </select>
+                  </div>
+                </li>
+              )}
+
+              {repType === "timeRange" && (
+                <li className="w-full flex flex-col relative items-start gap-1">
+                  <label className="text-base font-medium">Time Range</label>
+                  <div className="w-full flex gap-2 items-center mb-2">
+                    <div className="flex-1 flex gap-1 items-center">
+                      <span className="text-sm text-neutral-600">Min:</span>
+                      <input
+                        value={timeRange.min.time}
+                        onChange={(e) =>
+                          setTimeRange({
+                            ...timeRange,
+                            min: {
+                              ...timeRange.min,
+                              time: Number(e.target.value),
+                            },
+                          })
+                        }
+                        type="number"
+                        placeholder="Min time"
+                        className="flex-1 h-10 rounded-xl border border-neutral-200 px-3 py-1 text-sm"
+                      />
+                      <select
+                        value={timeRange.min.unit}
+                        onChange={(e) =>
+                          setTimeRange({
+                            ...timeRange,
+                            min: { ...timeRange.min, unit: e.target.value },
+                          })
+                        }
+                        className="w-24 h-10 rounded-xl border border-neutral-200 px-2 py-1 text-sm"
+                      >
+                        <option value="seconds">sec</option>
+                        <option value="minutes">min</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="w-full flex gap-2 items-center">
+                    <div className="flex-1 flex gap-1 items-center">
+                      <span className="text-sm text-neutral-600">Max:</span>
+                      <input
+                        value={timeRange.max.time}
+                        onChange={(e) =>
+                          setTimeRange({
+                            ...timeRange,
+                            max: {
+                              ...timeRange.max,
+                              time: Number(e.target.value),
+                            },
+                          })
+                        }
+                        type="number"
+                        placeholder="Max time"
+                        className="flex-1 h-10 rounded-xl border border-neutral-200 px-3 py-1 text-sm"
+                      />
+                      <select
+                        value={timeRange.max.unit}
+                        onChange={(e) =>
+                          setTimeRange({
+                            ...timeRange,
+                            max: { ...timeRange.max, unit: e.target.value },
+                          })
+                        }
+                        className="w-24 h-10 rounded-xl border border-neutral-200 px-2 py-1 text-sm"
+                      >
+                        <option value="seconds">sec</option>
+                        <option value="minutes">min</option>
+                      </select>
+                    </div>
+                  </div>
+                </li>
+              )}
+
+              {repType === "other" && (
+                <li className="w-full flex flex-col relative items-start gap-1">
+                  <label htmlFor="reps" className="text-base font-medium">
+                    Reps Description
+                  </label>
+                  <input
+                    value={reps}
+                    onChange={(e) => setReps(e.target.value)}
+                    type="text"
+                    name="reps"
+                    id="reps"
+                    placeholder="e.g., 'Hold until failure', '3x10', etc."
+                    className="w-full h-12 rounded-2xl border border-neutral-200 px-4 py-2 text-base"
+                  />
+                </li>
+              )}
+              {/* Rest & Targets Section */}
+              <li className="w-full mt-6">
+                <h3 className="text-lg font-semibold text-neutral-700 mb-3 border-b border-neutral-200 pb-2">
+                  Rest & Performance Targets
+                </h3>
+              </li>
+
+              {/* Enhanced Rest Time Section */}
+              <li className="w-full flex flex-col relative items-start gap-2">
+                <label className="text-base font-medium">Rest Time</label>
+                <div className="w-full space-y-2">
+                  {/* Rest Between Sets */}
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-neutral-600 min-w-[120px]">
+                      Between Sets:
+                    </label>
+                    <input
+                      value={restTimeSets.time}
+                      onChange={(e) =>
+                        setRestTimeSets({
+                          ...restTimeSets,
+                          time: Number(e.target.value),
+                        })
+                      }
+                      type="number"
+                      placeholder="60"
+                      className="flex-1 h-10 rounded-xl border border-neutral-200 px-3 py-1 text-sm"
+                    />
+                    <select
+                      value={restTimeSets.unit}
+                      onChange={(e) =>
+                        setRestTimeSets({
+                          ...restTimeSets,
+                          unit: e.target.value,
+                        })
+                      }
+                      className="w-24 h-10 rounded-xl border border-neutral-200 px-2 py-1 text-sm"
+                    >
+                      <option value="seconds">sec</option>
+                      <option value="minutes">min</option>
+                    </select>
+                  </div>
+
+                  {/* Rest Between Reps (for advanced exercises) */}
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-neutral-600 min-w-[120px]">
+                      Between Reps:
+                    </label>
+                    <input
+                      value={restTimeReps.time}
+                      onChange={(e) =>
+                        setRestTimeReps({
+                          ...restTimeReps,
+                          time: Number(e.target.value),
+                        })
+                      }
+                      type="number"
+                      placeholder="0"
+                      className="flex-1 h-10 rounded-xl border border-neutral-200 px-3 py-1 text-sm"
+                    />
+                    <select
+                      value={restTimeReps.unit}
+                      onChange={(e) =>
+                        setRestTimeReps({
+                          ...restTimeReps,
+                          unit: e.target.value,
+                        })
+                      }
+                      className="w-24 h-10 rounded-xl border border-neutral-200 px-2 py-1 text-sm"
+                    >
+                      <option value="seconds">sec</option>
+                      <option value="minutes">min</option>
+                    </select>
+                  </div>
+
+                  {/* Legacy rest seconds for backward compatibility */}
+                  <input
+                    type="hidden"
+                    value={restSecs}
+                    onChange={(e) => setRestSecs(Number(e.target.value))}
+                  />
+                </div>
+              </li>
+
+              {/* Target Metric Section */}
+              <li className="w-full flex flex-col relative items-start gap-2">
+                <label className="text-base font-medium">
+                  Target Metric (Optional)
                 </label>
-                <input
-                  required
-                  value={restSecs}
-                  onChange={(e) => setRestSecs(Number(e.target.value))}
-                  type="number"
-                  name="restSecs"
-                  id="restSecs"
-                  className="w-full h-12 rounded-2xl border border-neutral-200 px-4 py-2 text-base"
-                />
+                <p className="text-sm text-neutral-600 mb-2">
+                  Set a target for users to aim for (e.g., weight, speed,
+                  distance)
+                </p>
+                <div className="w-full space-y-2">
+                  <div className="flex gap-2">
+                    <select
+                      value={targetMetric.type}
+                      onChange={(e) =>
+                        setTargetMetric({
+                          ...targetMetric,
+                          type: e.target.value,
+                        })
+                      }
+                      className="flex-1 h-10 rounded-xl border border-neutral-200 px-3 py-1 text-sm"
+                    >
+                      <option value="">No Target</option>
+                      <option value="weight">Weight</option>
+                      <option value="speed">Speed</option>
+                      <option value="distance">Distance</option>
+                      <option value="time">Time</option>
+                      <option value="heartRate">Heart Rate</option>
+                      <option value="power">Power</option>
+                      <option value="other">Other</option>
+                    </select>
+                    {targetMetric.type && (
+                      <input
+                        value={targetMetric.name}
+                        onChange={(e) =>
+                          setTargetMetric({
+                            ...targetMetric,
+                            name: e.target.value,
+                          })
+                        }
+                        type="text"
+                        placeholder="Metric name"
+                        className="flex-1 h-10 rounded-xl border border-neutral-200 px-3 py-1 text-sm"
+                      />
+                    )}
+                  </div>
+
+                  {targetMetric.type && (
+                    <div className="flex gap-2">
+                      <input
+                        value={targetMetric.number}
+                        onChange={(e) =>
+                          setTargetMetric({
+                            ...targetMetric,
+                            number: Number(e.target.value),
+                          })
+                        }
+                        type="number"
+                        placeholder="Target value"
+                        className="flex-1 h-10 rounded-xl border border-neutral-200 px-3 py-1 text-sm"
+                      />
+                      <input
+                        value={targetMetric.unit}
+                        onChange={(e) =>
+                          setTargetMetric({
+                            ...targetMetric,
+                            unit: e.target.value,
+                          })
+                        }
+                        type="text"
+                        placeholder="Unit (lbs, mph, etc.)"
+                        className="w-32 h-10 rounded-xl border border-neutral-200 px-3 py-1 text-sm"
+                      />
+                    </div>
+                  )}
+                </div>
               </li>
               <li className="w-full flex flex-col relative items-start gap-1">
                 <label
@@ -435,13 +865,82 @@ const FormPages: React.FC<FormPagesProps> = ({
                 <p className="text-2xl">{numSets.toString()}</p>
               </li>
               <li className="w-full flex flex-col relative items-start gap-1">
-                <p className="font-medium text-base">Reps/Rep Range</p>
-                <p className="text-2xl">{reps}</p>
+                <p className="font-medium text-base">Rep Configuration</p>
+                <div className="space-y-2">
+                  <p className="text-lg capitalize">
+                    <strong>Type:</strong>{" "}
+                    {repType.replace(/([A-Z])/g, " $1").toLowerCase()}
+                  </p>
+                  {repType === "number" && (
+                    <p className="text-lg">
+                      <strong>Reps:</strong> {repNumber}
+                    </p>
+                  )}
+                  {repType === "repRange" && (
+                    <p className="text-lg">
+                      <strong>Range:</strong> {repRange.min} - {repRange.max}{" "}
+                      reps
+                    </p>
+                  )}
+                  {repType === "duration" && (
+                    <p className="text-lg">
+                      <strong>Duration:</strong> {repDuration.time}{" "}
+                      {repDuration.unit}
+                    </p>
+                  )}
+                  {repType === "distance" && (
+                    <p className="text-lg">
+                      <strong>Distance:</strong> {repDistance.distance}{" "}
+                      {repDistance.unit}
+                    </p>
+                  )}
+                  {repType === "timeRange" && (
+                    <p className="text-lg">
+                      <strong>Time Range:</strong> {timeRange.min.time}{" "}
+                      {timeRange.min.unit} - {timeRange.max.time}{" "}
+                      {timeRange.max.unit}
+                    </p>
+                  )}
+                  {repType === "other" && (
+                    <p className="text-lg">
+                      <strong>Description:</strong> {reps}
+                    </p>
+                  )}
+                </div>
               </li>
               <li className="w-full flex flex-col relative items-start gap-1">
-                <p className="font-medium text-base">Rest Seconds</p>
-                <p className="text-2xl">{restSecs}</p>
+                <p className="font-medium text-base">Rest Time</p>
+                <div className="space-y-1">
+                  {restTimeSets.time > 0 && (
+                    <p className="text-lg">
+                      <strong>Between Sets:</strong> {restTimeSets.time}{" "}
+                      {restTimeSets.unit}
+                    </p>
+                  )}
+                  {restTimeReps.time > 0 && (
+                    <p className="text-lg">
+                      <strong>Between Reps:</strong> {restTimeReps.time}{" "}
+                      {restTimeReps.unit}
+                    </p>
+                  )}
+                  {restTimeSets.time === 0 && restTimeReps.time === 0 && (
+                    <p className="text-lg text-neutral-500">
+                      No rest time specified
+                    </p>
+                  )}
+                </div>
               </li>
+              {targetMetric.type && (
+                <li className="w-full flex flex-col relative items-start gap-1">
+                  <p className="font-medium text-base">Target Metric</p>
+                  <div className="p-3 bg-lime-50 border border-lime-200 rounded-lg">
+                    <p className="text-lg">
+                      <strong>{targetMetric.name || targetMetric.type}:</strong>{" "}
+                      {targetMetric.number} {targetMetric.unit}
+                    </p>
+                  </div>
+                </li>
+              )}
               <li className="w-full flex flex-col relative items-start gap-1">
                 <p className="font-medium text-base">Equipment</p>
                 <div className="w-full flex gap-4 items-center mt-1">

@@ -3,7 +3,7 @@ import Alert from "@/components/ui/Alert";
 import { useAuth } from "@/context/AuthContext";
 import { useDialog } from "@/context/DialogContext";
 import { http } from "@/lib/api";
-import { ExerciseType } from "@/types/workout";
+import { ExerciseType, RepObjType } from "@/types/workout";
 import { ArrowLeft, ArrowRight, CheckCheck, Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
@@ -91,10 +91,59 @@ function WorkoutFormPages({
 
   const [selected, setSelected] = useState<ExerciseType[]>([]); // up to 12
 
+  // page 2.5: configure selected exercises
+  const [exerciseConfigs, setExerciseConfigs] = useState<
+    Record<
+      string,
+      {
+        sets?: number;
+        reps?: number | string;
+        restSecs?: number;
+        repObj?: RepObjType;
+      }
+    >
+  >({});
+
+  // Helper to get config for an exercise (with defaults)
+  const getExerciseConfig = (exerciseId: string, exercise?: ExerciseType) => {
+    const config = exerciseConfigs[exerciseId];
+    if (config) return config;
+
+    // Return default config based on exercise
+    return {
+      sets: exercise?.details?.sets || 3,
+      reps: exercise?.details?.reps || "8-12",
+      restSecs: exercise?.details?.restSecs || 60,
+      repObj: {
+        repType: exercise?.details?.repType || "number",
+        repNumber: exercise?.details?.repNumber || 10,
+        repRange: exercise?.details?.repRange,
+        timeRange: exercise?.details?.timeRange,
+        repDuration: exercise?.details?.repDuration,
+        repDistance: exercise?.details?.repDistance,
+        restTimeSets: exercise?.details?.restTimeSets,
+        restTimeReps: exercise?.details?.restTimeReps,
+        targetMetric: exercise?.details?.targetMetric,
+        equipment: exercise?.details?.equipment || [],
+      },
+    };
+  };
+
+  // Update exercise configuration
+  const updateExerciseConfig = (
+    exerciseId: string,
+    updates: Partial<(typeof exerciseConfigs)[string]>
+  ) => {
+    setExerciseConfigs((prev) => ({
+      ...prev,
+      [exerciseId]: { ...getExerciseConfig(exerciseId), ...updates },
+    }));
+  };
+
   const filtered = useMemo(() => {
     const qq = q.trim().toLowerCase();
     if (!qq) return library;
-    return library.filter((e) => e.title.toLowerCase().includes(qq));
+    return library.filter((e) => e.title?.toLowerCase().includes(qq));
   }, [library, q]);
 
   const limitReached = selected.length >= 12;
@@ -146,6 +195,8 @@ function WorkoutFormPages({
       } catch (e: any) {
         setErrorMessage(e?.message || "Please add exercises.");
       }
+    } else if (currPage === 3) {
+      setCurrPage(4);
     }
   };
   const prev = () => setCurrPage((p) => Math.max(1, p - 1));
@@ -177,12 +228,20 @@ function WorkoutFormPages({
         blocks: [
           {
             title: "Main",
-            items: selected.map((ex) => ({
-              exerciseId: ex.id,
-              // sets/reps/restSecs are optional per your schema; keep minimal for now
-            })),
+            items: selected.map((ex) => {
+              const config = getExerciseConfig(ex.id, ex);
+              return {
+                exerciseId: ex.id,
+                name: ex.title,
+                sets: config.sets,
+                reps: config.reps,
+                restSecs: config.restSecs,
+                repObj: config.repObj,
+              };
+            }),
           },
         ],
+        schemaVersion: 2, // Mark as v2 workout
       };
 
       const created = await http.post<{ id: string }>("/workouts", payload);
@@ -489,6 +548,381 @@ function WorkoutFormPages({
             <span className="size-8 rounded-full border border-neutral-200 flex items-center justify-center ">
               3
             </span>
+            <h1 className="text-lg md:text-2xl font-medium">
+              Configure Exercises
+            </h1>
+          </div>
+
+          <div className="w-full flex flex-col gap-4 max-w-[800px] mx-auto">
+            <p className="text-center text-neutral-600 mb-4">
+              Customize sets, reps, and performance targets for each exercise
+            </p>
+
+            {selected.map((ex, index) => {
+              const config = getExerciseConfig(ex.id, ex);
+              const repType = config.repObj?.repType || "number";
+
+              return (
+                <div
+                  key={ex.id}
+                  className="border border-neutral-200 rounded-xl p-4"
+                >
+                  {/* Exercise Header */}
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-16 h-16 bg-neutral-200 rounded-lg overflow-hidden">
+                      {ex.image ? (
+                        <img
+                          src={ex.image}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-neutral-300" />
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-medium">{ex.title}</h3>
+                      <p className="text-sm text-neutral-500">
+                        {ex.tags?.slice(0, 3).join(" · ")}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Configuration Form */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Sets */}
+                    <div>
+                      <label className="block text-sm font-medium mb-1">
+                        Sets
+                      </label>
+                      <input
+                        type="number"
+                        value={config.sets || 0}
+                        onChange={(e) =>
+                          updateExerciseConfig(ex.id, {
+                            sets: Number(e.target.value),
+                          })
+                        }
+                        className="w-full h-10 rounded-xl border border-neutral-200 px-3 text-sm"
+                        min="1"
+                      />
+                    </div>
+
+                    {/* Rep Type */}
+                    <div>
+                      <label className="block text-sm font-medium mb-1">
+                        Rep Type
+                      </label>
+                      <select
+                        value={repType}
+                        onChange={(e) =>
+                          updateExerciseConfig(ex.id, {
+                            repObj: {
+                              ...config.repObj,
+                              repType: e.target.value as any,
+                            },
+                          })
+                        }
+                        className="w-full h-10 rounded-xl border border-neutral-200 px-3 text-sm"
+                      >
+                        <option value="number">Fixed Number</option>
+                        <option value="repRange">Rep Range</option>
+                        <option value="duration">Duration</option>
+                        <option value="distance">Distance</option>
+                        <option value="timeRange">Time Range</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+
+                    {/* Conditional Rep Configuration */}
+                    {repType === "number" && (
+                      <div>
+                        <label className="block text-sm font-medium mb-1">
+                          Reps
+                        </label>
+                        <input
+                          type="number"
+                          value={config.repObj?.repNumber || 0}
+                          onChange={(e) =>
+                            updateExerciseConfig(ex.id, {
+                              repObj: {
+                                ...config.repObj,
+                                repNumber: Number(e.target.value),
+                              },
+                            })
+                          }
+                          className="w-full h-10 rounded-xl border border-neutral-200 px-3 text-sm"
+                          min="1"
+                        />
+                      </div>
+                    )}
+
+                    {repType === "repRange" && (
+                      <div>
+                        <label className="block text-sm font-medium mb-1">
+                          Rep Range
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="number"
+                            placeholder="Min"
+                            value={config.repObj?.repRange?.min || 0}
+                            onChange={(e) =>
+                              updateExerciseConfig(ex.id, {
+                                repObj: {
+                                  ...config.repObj,
+                                  repRange: {
+                                    min: Number(e.target.value),
+                                    max: config.repObj?.repRange?.max || null,
+                                  },
+                                },
+                              })
+                            }
+                            className="flex-1 h-10 rounded-xl border border-neutral-200 px-3 text-sm"
+                          />
+                          <span className="self-center text-neutral-500">
+                            to
+                          </span>
+                          <input
+                            type="number"
+                            placeholder="Max"
+                            value={config.repObj?.repRange?.max || 0}
+                            onChange={(e) =>
+                              updateExerciseConfig(ex.id, {
+                                repObj: {
+                                  ...config.repObj,
+                                  repRange: {
+                                    min: config.repObj?.repRange?.min || null,
+                                    max: Number(e.target.value),
+                                  },
+                                },
+                              })
+                            }
+                            className="flex-1 h-10 rounded-xl border border-neutral-200 px-3 text-sm"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {repType === "duration" && (
+                      <div>
+                        <label className="block text-sm font-medium mb-1">
+                          Duration
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="number"
+                            placeholder="Time"
+                            value={config.repObj?.repDuration?.time || 0}
+                            onChange={(e) =>
+                              updateExerciseConfig(ex.id, {
+                                repObj: {
+                                  ...config.repObj,
+                                  repDuration: {
+                                    time: Number(e.target.value),
+                                    unit:
+                                      config.repObj?.repDuration?.unit ||
+                                      "seconds",
+                                  },
+                                },
+                              })
+                            }
+                            className="flex-1 h-10 rounded-xl border border-neutral-200 px-3 text-sm"
+                          />
+                          <select
+                            value={
+                              config.repObj?.repDuration?.unit || "seconds"
+                            }
+                            onChange={(e) =>
+                              updateExerciseConfig(ex.id, {
+                                repObj: {
+                                  ...config.repObj,
+                                  repDuration: {
+                                    time:
+                                      config.repObj?.repDuration?.time || null,
+                                    unit: e.target.value,
+                                  },
+                                },
+                              })
+                            }
+                            className="w-24 h-10 rounded-xl border border-neutral-200 px-2 text-sm"
+                          >
+                            <option value="seconds">sec</option>
+                            <option value="minutes">min</option>
+                          </select>
+                        </div>
+                      </div>
+                    )}
+
+                    {repType === "other" && (
+                      <div>
+                        <label className="block text-sm font-medium mb-1">
+                          Rep Description
+                        </label>
+                        <input
+                          type="text"
+                          value={(config.reps as string) || ""}
+                          onChange={(e) =>
+                            updateExerciseConfig(ex.id, {
+                              reps: e.target.value,
+                            })
+                          }
+                          placeholder="e.g., 'Until failure', '3 x 10', etc."
+                          className="w-full h-10 rounded-xl border border-neutral-200 px-3 text-sm"
+                        />
+                      </div>
+                    )}
+
+                    {/* Rest Time */}
+                    <div>
+                      <label className="block text-sm font-medium mb-1">
+                        Rest Between Sets (sec)
+                      </label>
+                      <input
+                        type="number"
+                        value={config.restSecs || 0}
+                        onChange={(e) =>
+                          updateExerciseConfig(ex.id, {
+                            restSecs: Number(e.target.value),
+                          })
+                        }
+                        className="w-full h-10 rounded-xl border border-neutral-200 px-3 text-sm"
+                        min="0"
+                      />
+                    </div>
+
+                    {/* Target Metric (Optional) */}
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium mb-1">
+                        Performance Target (Optional)
+                      </label>
+                      <div className="flex gap-2">
+                        <select
+                          value={config.repObj?.targetMetric?.type || ""}
+                          onChange={(e) =>
+                            updateExerciseConfig(ex.id, {
+                              repObj: {
+                                ...config.repObj,
+                                targetMetric: {
+                                  type: e.target.value || null,
+                                  unit:
+                                    config.repObj?.targetMetric?.unit || null,
+                                  number:
+                                    config.repObj?.targetMetric?.number || null,
+                                  name:
+                                    config.repObj?.targetMetric?.name || null,
+                                },
+                              },
+                            })
+                          }
+                          className="flex-1 h-10 rounded-xl border border-neutral-200 px-3 text-sm"
+                        >
+                          <option value="">No Target</option>
+                          <option value="weight">Weight</option>
+                          <option value="speed">Speed</option>
+                          <option value="distance">Distance</option>
+                          <option value="time">Time</option>
+                          <option value="other">Other</option>
+                        </select>
+
+                        {config.repObj?.targetMetric?.type && (
+                          <>
+                            <input
+                              type="number"
+                              placeholder="Target value"
+                              value={config.repObj.targetMetric.number || 0}
+                              onChange={(e) =>
+                                updateExerciseConfig(ex.id, {
+                                  repObj: {
+                                    ...config.repObj,
+                                    targetMetric: {
+                                      type:
+                                        config.repObj?.targetMetric?.type ||
+                                        null,
+                                      unit:
+                                        config.repObj?.targetMetric?.unit ||
+                                        null,
+                                      number: Number(e.target.value),
+                                      name:
+                                        config.repObj?.targetMetric?.name ||
+                                        null,
+                                    },
+                                  },
+                                })
+                              }
+                              className="w-24 h-10 rounded-xl border border-neutral-200 px-3 text-sm"
+                            />
+                            <input
+                              type="text"
+                              placeholder="Unit"
+                              value={config.repObj.targetMetric.unit || ""}
+                              onChange={(e) =>
+                                updateExerciseConfig(ex.id, {
+                                  repObj: {
+                                    ...config.repObj,
+                                    targetMetric: {
+                                      type:
+                                        config.repObj?.targetMetric?.type ||
+                                        null,
+                                      unit: e.target.value,
+                                      number:
+                                        config.repObj?.targetMetric?.number ||
+                                        null,
+                                      name:
+                                        config.repObj?.targetMetric?.name ||
+                                        null,
+                                    },
+                                  },
+                                })
+                              }
+                              className="w-20 h-10 rounded-xl border border-neutral-200 px-3 text-sm"
+                            />
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            <div className="flex flex-col gap-3 items-center mt-6">
+              <button
+                type="button"
+                onClick={next}
+                className="w-full max-w-[450px] p-4 rounded-2xl bg-black hover:bg-[#1e1e1e] text-white cursor-pointer text-center flex items-center justify-center gap-1"
+              >
+                <span>Review Workout</span>
+                <ArrowRight className="text-white size-6" />
+              </button>
+
+              <button
+                type="button"
+                onClick={prev}
+                className="w-full max-w-[450px] p-4 rounded-2xl border border-neutral-200 cursor-pointer text-center flex items-center justify-center gap-1"
+              >
+                <ArrowLeft className="text-black size-6" />
+                <span>Previous Step</span>
+              </button>
+
+              <button
+                onClick={handleCancelExit}
+                type="button"
+                className="w-full max-w-[450px] p-4 rounded-2xl border border-neutral-200 text-red-500 cursor-pointer text-center"
+              >
+                Exit
+              </button>
+            </div>
+          </div>
+        </>
+      );
+
+    case 4:
+      return (
+        <>
+          <div className="w-full p-4 flex items-center max-w-[500px] mx-auto justify-center gap-2">
+            <span className="size-8 rounded-full border border-neutral-200 flex items-center justify-center ">
+              4
+            </span>
             <h1 className="text-lg md:text-2xl font-medium">Review Workout</h1>
           </div>
 
@@ -520,32 +954,68 @@ function WorkoutFormPages({
             </li>
             <li>
               <p className="font-medium text-base">
-                Exercises ({selected.length})
+                Workout Structure ({selected.length} exercises)
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
-                {selected.map((ex) => (
-                  <div
-                    key={ex.id}
-                    className="flex items-center gap-3 border border-neutral-200 rounded-xl p-3"
-                  >
-                    <div className="w-16 h-16 bg-neutral-200 rounded-lg overflow-hidden">
-                      {ex.image ? (
-                        <img
-                          src={ex.image}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-neutral-300" />
-                      )}
+              <div className="space-y-4 mt-3">
+                {selected.map((ex, index) => {
+                  const config = getExerciseConfig(ex.id, ex);
+                  const repType = config.repObj?.repType || "number";
+
+                  return (
+                    <div
+                      key={ex.id}
+                      className="border border-neutral-200 rounded-xl p-4"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="w-16 h-16 bg-neutral-500 rounded-lg overflow-hidden flex-shrink-0">
+                          {ex.image ? (
+                            <img
+                              src={ex.image}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-neutral-300" />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-medium text-base">{ex.title}</h4>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2 text-sm">
+                            <div>
+                              <span className="text-neutral-600">Sets:</span>{" "}
+                              {config.sets}
+                            </div>
+                            <div>
+                              <span className="text-neutral-600">Reps:</span>{" "}
+                              {repType === "number" && config.repObj?.repNumber}
+                              {repType === "repRange" &&
+                                `${config.repObj?.repRange?.min}-${config.repObj?.repRange?.max}`}
+                              {repType === "duration" &&
+                                `${config.repObj?.repDuration?.time} ${config.repObj?.repDuration?.unit}`}
+                              {repType === "other" && config.reps}
+                              {!config.repObj?.repNumber &&
+                                !config.repObj?.repRange &&
+                                !config.repObj?.repDuration &&
+                                !config.reps &&
+                                "Default"}
+                            </div>
+                            <div>
+                              <span className="text-neutral-600">Rest:</span>{" "}
+                              {config.restSecs}s
+                            </div>
+                          </div>
+                          {config.repObj?.targetMetric?.type && (
+                            <div className="mt-2 p-2 border border-lime-200 rounded text-sm">
+                              <strong>Target:</strong>{" "}
+                              {config.repObj.targetMetric.number}{" "}
+                              {config.repObj.targetMetric.unit} (
+                              {config.repObj.targetMetric.type})
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">{ex.title}</p>
-                      <p className="text-xs text-neutral-500">
-                        {ex.tags?.slice(0, 3).join(" · ")}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </li>
 
@@ -561,10 +1031,10 @@ function WorkoutFormPages({
 
               <button
                 type="button"
-                onClick={() => setCurrPage(2)}
+                onClick={() => setCurrPage(3)}
                 className="w-full max-w-[450px] p-4 rounded-2xl border border-neutral-200 cursor-pointer text-center flex items-center justify-center gap-1"
               >
-                <ArrowLeft className="text-white size-6" />
+                <ArrowLeft className="text-black size-6" />
                 <span>Previous Step</span>
               </button>
 
