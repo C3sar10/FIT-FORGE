@@ -719,7 +719,7 @@ const page = () => {
   useEffect(() => {
     if (workoutData) {
       setCurrWorkout(workoutData);
-
+      console.log("workout data: ", workoutData);
       const fetchExercises = async () => {
         // Create a map of exerciseId to workout item data
         const workoutItemsMap = new Map();
@@ -756,39 +756,39 @@ const page = () => {
                   ...data,
                   details: {
                     ...data.details,
-                    sets: workoutItem.sets ?? data.details.sets,
-                    reps: workoutItem.reps ?? data.details.reps,
-                    restSecs: workoutItem.restSecs ?? data.details.restSecs,
+                    sets: data.details.sets ?? workoutItem.sets,
+                    reps: data.details.reps ?? workoutItem.reps,
+                    restSecs: data.details.restSecs ?? workoutItem.restSecs,
                     // Merge repObj if available from workout
-                    ...(workoutItem.repObj && {
-                      ...workoutItem.repObj,
-                      // Keep existing exercise repObj as fallback
-                      repType:
-                        workoutItem.repObj.repType ?? data.details.repType,
-                      repNumber:
-                        workoutItem.repObj.repNumber ?? data.details.repNumber,
-                      repRange:
-                        workoutItem.repObj.repRange ?? data.details.repRange,
-                      timeRange:
-                        workoutItem.repObj.timeRange ?? data.details.timeRange,
-                      repDuration:
-                        workoutItem.repObj.repDuration ??
-                        data.details.repDuration,
-                      repDistance:
-                        workoutItem.repObj.repDistance ??
-                        data.details.repDistance,
-                      restTimeSets:
-                        workoutItem.repObj.restTimeSets ??
-                        data.details.restTimeSets,
-                      restTimeReps:
-                        workoutItem.repObj.restTimeReps ??
-                        data.details.restTimeReps,
-                      targetMetric:
-                        workoutItem.repObj.targetMetric ??
-                        data.details.targetMetric,
-                      equipment:
-                        workoutItem.repObj.equipment ?? data.details.equipment,
-                    }),
+
+                    // Keep existing exercise repObj as fallback
+                    repType: data.details.repType ?? workoutItem.repObj.repType,
+                    repNumber:
+                      data.details.repNumber ?? workoutItem.repObj.repNumber,
+                    repRange:
+                      data.details.repRange ?? workoutItem.repObj.repRange,
+                    timeRange:
+                      data.details.timeRange ?? workoutItem.repObj.timeRange,
+                    repDuration:
+                      data.details.repDuration ??
+                      workoutItem.repObj.repDuration,
+                    repDistance:
+                      data.details.repDistance ??
+                      workoutItem.repObj.repDistance,
+
+                    restTimeSets:
+                      data.details.restTimeSets ??
+                      workoutItem.repObj.restTimeSets,
+
+                    restTimeReps:
+                      data.details.restTimeReps ??
+                      workoutItem.repObj.restTimeReps,
+
+                    targetMetric:
+                      data.details.targetMetric ??
+                      workoutItem.repObj.targetMetric,
+                    equipment:
+                      data.details.equipment ?? workoutItem.repObj.equipment,
                   },
                 };
               }
@@ -805,6 +805,7 @@ const page = () => {
           (e): e is ExerciseType => e !== null
         );
         setExerciseList(validExercises);
+        console.log("valid exercises from this workout: ", validExercises);
       };
       fetchExercises().catch((err) => {
         console.error("Exercise fetch error:", err);
