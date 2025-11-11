@@ -54,8 +54,8 @@ const FeaturedWorkoutsSection = (props: Props) => {
                   key={item.id}
                   title={item.name}
                   tags={item.tags}
-                  imageUrl={item.image}
-                  id={item.id}
+                  imageUrl={item.image ? item.image : undefined}
+                  id={item.id === undefined ? "undefined" : item.id}
                   isWorkout={true}
                   isExercise={false}
                 />
