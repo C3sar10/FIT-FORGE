@@ -101,9 +101,9 @@ const page = (props: Props) => {
             {myExercises.map((item: ExerciseType, index: number) => (
               <SmallBrowseCards
                 key={index}
-                title={item.title}
+                title={item.title ? item.title : "Untitled Exercise"}
                 subtitle={item.type}
-                imgUrl={item.image}
+                imgUrl={item.image ? item.image : undefined}
                 action={true}
                 route={`/exercisepreview/${item.id}`}
               />
@@ -127,9 +127,9 @@ const page = (props: Props) => {
               searchExercises.map((item: ExerciseType, index: number) => (
                 <SmallBrowseCards
                   key={index}
-                  title={item.title}
+                  title={item.title ? item.title : "Untitled Exercise"}
                   subtitle={item.type}
-                  imgUrl={item.image}
+                  imgUrl={item.image ? item.image : undefined}
                   action={true}
                   route={`/exercisepreview/${item.id}`}
                 />
@@ -146,9 +146,9 @@ const page = (props: Props) => {
             libraryExercises.map((item: ExerciseType, index: number) => (
               <SmallBrowseCards
                 key={index}
-                title={item.title}
+                title={item.title ? item.title : "Untitled Exercise"}
                 subtitle={item.type}
-                imgUrl={item.image}
+                imgUrl={item.image ? item.image : undefined}
                 action={true}
                 route={`/exercisepreview/${item.id}`}
               />

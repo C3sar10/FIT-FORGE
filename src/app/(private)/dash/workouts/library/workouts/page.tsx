@@ -90,9 +90,9 @@ const page = (props: Props) => {
             customList.map((item, index) => (
               <SmallBrowseCards
                 key={index}
-                title={item.title}
+                title={item.title ? item.title : "Untitled Workout"}
                 subtitle={item.type}
-                imgUrl={item.image}
+                imgUrl={item.image ? item.image : undefined}
                 action={true}
                 route={`/exercisepreview/${item.id}`}
               />
@@ -106,9 +106,9 @@ const page = (props: Props) => {
             libraryList.map((item, index) => (
               <SmallBrowseCards
                 key={index}
-                title={item.title}
+                title={item.title ? item.title : "Untitled Workout"}
                 subtitle={item.type}
-                imgUrl={item.image}
+                imgUrl={item.image ? item.image : undefined}
                 action={true}
                 route={`/exercisepreview/${item.id}`}
               />
