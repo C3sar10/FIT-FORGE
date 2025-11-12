@@ -20,7 +20,7 @@ export const WorkoutBrowseDefault = [
   },
   {
     title: "Workout Library",
-    routeUrl: "/dash/workouts/library/exercises",
+    routeUrl: "/dash/workouts/library/workouts",
     action: true,
     imgUrl: "/browse-web/workout-library-default.webp",
   },

@@ -40,6 +40,8 @@ const ListQuery = z.object({
   limit: z.coerce.number().int().min(1).max(50).default(20),
   cursor: z.string().optional(),
   scope: z.enum(["mine", "global", "all"]).default("mine"),
+  // Add optional offset-based pagination for compatibility
+  page: z.coerce.number().int().min(1).optional(),
 });
 
 // --- Create
@@ -120,7 +122,7 @@ router.post("/", async (req, res, next) => {
 // --- List (Featured/Library/Favorites)
 router.get("/", async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const { scope, favoritesOnly, query, limit, cursor } = ListQuery.parse(
+  const { scope, favoritesOnly, query, limit, cursor, page } = ListQuery.parse(
     req.query
   );
 
@@ -132,23 +134,80 @@ router.get("/", async (req, res) => {
 
   if (favoritesOnly) filter.isFavorite = true;
   if (query) filter.name = { $regex: query, $options: "i" };
-  if (cursor) filter._id = { $lt: new Types.ObjectId(cursor) };
 
-  const docs = await Workout.find(filter)
+  // Apply cursor filter BEFORE creating the query
+  if (cursor) {
+    filter._id = { $lt: new Types.ObjectId(cursor) };
+  }
+
+  let mongoQuery = Workout.find(filter)
     .sort({ _id: -1 })
-    .limit(limit + 1)
     .select(
       "name tags image type isFavorite updatedAt blocks description author"
     )
     .lean();
 
-  const nextCursor = docs.length > limit ? String(docs[limit]._id) : null;
+  // Support both cursor-based and offset-based pagination
+  let paginationInfo: any = {};
 
-  const items = (docs as any[]).slice(0, limit).map((d) => ({
+  if (cursor) {
+    // Cursor-based pagination (preferred for performance)
+    mongoQuery = mongoQuery.limit(limit + 1);
+
+    const docs = await mongoQuery;
+    const nextCursor = docs.length > limit ? String(docs[limit]._id) : null;
+    const items = docs.slice(0, limit);
+
+    paginationInfo = { nextCursor };
+
+    return res.json({
+      items: items.map(formatWorkoutItem),
+      pagination: paginationInfo,
+    });
+  }
+
+  if (page) {
+    // Offset-based pagination (for compatibility)
+    const skip = (page - 1) * limit;
+    mongoQuery = mongoQuery.skip(skip).limit(limit + 1);
+
+    const docs = await mongoQuery;
+    const hasNext = docs.length > limit;
+    const items = docs.slice(0, limit);
+
+    paginationInfo = {
+      currentPage: page,
+      hasNext,
+      hasPrevious: page > 1,
+      nextPage: hasNext ? page + 1 : null,
+      previousPage: page > 1 ? page - 1 : null,
+    };
+
+    return res.json({
+      items: items.map(formatWorkoutItem),
+      pagination: paginationInfo,
+    });
+  }
+
+  // Default: first page without pagination params
+  mongoQuery = mongoQuery.limit(limit + 1);
+  const docs = await mongoQuery;
+  const nextCursor = docs.length > limit ? String(docs[limit]._id) : null;
+  const items = docs.slice(0, limit);
+
+  res.json({
+    items: items.map(formatWorkoutItem),
+    pagination: { nextCursor },
+  });
+});
+
+// Helper function to format workout items consistently
+function formatWorkoutItem(d: any) {
+  return {
     id: String(d._id),
     name: d.name,
     tags: d.tags ?? [],
-    image: d.image ?? null, // include for cards
+    image: d.image ?? null,
     isFavorite: !!d.isFavorite,
     updatedAt: d.updatedAt,
     author: d.author,
@@ -164,10 +223,8 @@ router.get("/", async (req, res) => {
         name: i.name ?? undefined,
       })),
     })),
-  }));
-
-  res.json({ items, nextCursor });
-});
+  };
+}
 
 // --- Get one
 router.get("/:id", async (req, res) => {
