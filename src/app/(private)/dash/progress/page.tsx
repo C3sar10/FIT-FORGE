@@ -1,5 +1,6 @@
 import ProgressPageHeaderSection from "@/components/progress/ProgressPageHeaderSection";
 import GraphicCard from "@/components/ui/GraphicCard";
+import Link from "next/link";
 
 type Props = {};
 
@@ -9,10 +10,12 @@ const page = (props: Props) => {
       <ProgressPageHeaderSection />
       <div className="w-full flex flex-col gap-4 mt-4">
         <h1 className="text-3xl font-medium">More Analytics</h1>
-        <GraphicCard
-          title="My Metrics"
-          description="Numerical data you track - body weight, body fat, etc."
-        />
+        <Link href="/dash/progress/metrics">
+          <GraphicCard
+            title="My Metrics"
+            description="Numerical data you track - body weight, body fat, etc."
+          />
+        </Link>
         <GraphicCard
           title="Body Data"
           description="Track your daily nutrition - calories, macros, etc."
