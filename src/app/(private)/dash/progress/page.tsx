@@ -16,6 +16,12 @@ const page = (props: Props) => {
             description="Numerical data you track - body weight, body fat, etc."
           />
         </Link>
+        <Link href="/dash/progress/metrics/fitness">
+          <GraphicCard
+            title="Fitness Metrics"
+            description="Track strength, endurance, speed, balance & flexibility progress."
+          />
+        </Link>
         <GraphicCard
           title="Body Data"
           description="Track your daily nutrition - calories, macros, etc."
